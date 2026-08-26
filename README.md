@@ -62,6 +62,8 @@ theme:
   image_dim: 0.75           # validate measures the picture and says if this is too low
 ```
 
+![The same page with a background](docs/looks/background.png)
+
 `newtab demo -config yours.yaml` renders your config against invented state:
 what a background does to it, and what a row looks like when something is down.
 
@@ -131,6 +133,11 @@ Running the server instead keeps the page live.
 
 ## State from a monitor
 
+This reads [lookout](https://github.com/eeegoloauq/lookout) — a small uptime
+monitor of mine — and nothing else out of the box. Any other monitor works if
+something serves lookout's document, which is the short JSON below; a script in
+front of Uptime Kuma or Gatus is enough.
+
 ```yaml
 status:
   url: http://monitor.example/api/status
@@ -148,8 +155,7 @@ that is down says so and for how long. A healthy row shows whatever `tail` says:
 | `uptime24h`, `uptime7d` | that figure, always |
 | `never` | nothing, ever |
 
-Written for [lookout](https://github.com/eeegoloauq/lookout), but it only reads
-this much, so anything can serve it:
+The whole of what it reads:
 
 ```json
 {"version": 1, "checks": [
