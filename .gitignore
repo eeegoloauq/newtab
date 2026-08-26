@@ -1,2 +1,5 @@
 /newtab
 /dist/
+# The directory ships, what lands in it does not.
+/icons/*
+!/icons/.gitkeep

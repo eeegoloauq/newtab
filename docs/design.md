@@ -52,6 +52,15 @@ in version control, and a machine rewriting YAML loses the comments and the
 order its owner keeps in their head. A bookmarklet may one day append to a
 separate file the server owns; the config it does not touch.
 
+## A number on every row, all the time
+
+The first version of the tail showed latency on every live row. On a LAN that
+is the same three milliseconds every day, and a number that never changes is
+furniture — the eye stops reading it, including on the day it changes. The
+default says nothing while the last day was perfect and shows the uptime
+figure once it was not. Latency is still available (`status.tail: latency`)
+for anyone who wants to watch it.
+
 ## A database
 
 There is no state to keep. The page is a function of the config file.

@@ -9,7 +9,8 @@ step, no npm, one module (a YAML parser).
 cmd/newtab      CLI: run, validate, render, icons, version
 internal/config YAML -> sections, and every validation error the operator gets
 internal/icons  fetching a site's own favicon, and the store it lands in
-internal/status read-only client for a lookout monitor, polled on its own clock
+internal/status  read-only client for a lookout monitor, polled on its own clock
+internal/proxmox read-only client for a hypervisor's three numbers
 internal/web    the page: template, CSS, JS, and the HTTP handlers
 ```
 
@@ -37,6 +38,11 @@ answer 403 to anything less, and half the boxes on a home LAN serve a
 self-signed certificate. It follows that stored icons are untrusted bytes, so
 `/icon/` serves them under `nosniff` and a sandbox CSP. Do not "fix" any of
 those three by removing them.
+
+Secrets are read from the environment, never from the config: the config is in
+version control and the secret is not. `newtab validate` fails when the named
+variable is empty, because a page that silently drops an integration is worse
+than one that will not start.
 
 A request never waits on the monitor. The poller keeps the last answer in
 memory and a failed poll keeps it: a monitor restart is not an outage of

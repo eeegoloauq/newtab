@@ -31,6 +31,11 @@ type Check struct {
 	// them rather than claiming they are fine.
 	Muted     bool
 	LatencyMS int
+	// Uptime24h and Uptime7d are ratios in 0..1, as the monitor reports
+	// them. Zero means the monitor said nothing, which is not the same
+	// as an hour of downtime.
+	Uptime24h float64
+	Uptime7d  float64
 	// Down is how long the outage has lasted. Zero unless Up is false.
 	Down time.Duration
 }
@@ -129,6 +134,12 @@ type document struct {
 		Incident *struct {
 			DurationMS int64 `json:"duration_ms"`
 		} `json:"incident"`
+		Uptime24h *struct {
+			Ratio float64 `json:"ratio"`
+		} `json:"uptime_24h"`
+		Uptime7d *struct {
+			Ratio float64 `json:"ratio"`
+		} `json:"uptime_7d"`
 	} `json:"checks"`
 }
 
@@ -151,6 +162,12 @@ func (p *Poller) fetch(ctx context.Context, client *http.Client) (Snapshot, erro
 		check := Check{Name: c.Name, Up: c.Status == "up", Muted: c.Muted}
 		if c.LastProbe != nil {
 			check.LatencyMS = c.LastProbe.DurationMS
+		}
+		if c.Uptime24h != nil {
+			check.Uptime24h = c.Uptime24h.Ratio
+		}
+		if c.Uptime7d != nil {
+			check.Uptime7d = c.Uptime7d.Ratio
 		}
 		if c.Incident != nil {
 			check.Down = time.Duration(c.Incident.DurationMS) * time.Millisecond

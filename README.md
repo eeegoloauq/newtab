@@ -42,9 +42,31 @@ status:
 ```
 
 Rows are matched to checks by the host they point at, or by an explicit
-`check:` on the link. A matched row shows its last latency, or how long it has
-been down. Nothing is ever written back, the poll runs on its own clock, and a
-monitor that is unreachable simply leaves the rows quiet.
+`check:` on the link. A row that is down says so and for how long. What a
+healthy row says is up to `status.tail`:
+
+| `tail` | a healthy row shows |
+|---|---|
+| `exceptions` (default) | nothing, until the last day was less than perfect |
+| `latency` | the last probe, `23 ms` |
+| `uptime24h` / `uptime7d` | `99.8% 24h` |
+| `quiet` | nothing, ever |
+
+Nothing is ever written back, the poll runs on its own clock, and a monitor
+that is unreachable leaves the rows quiet rather than blank.
+
+A Proxmox host can put its own three numbers on its own row:
+
+```yaml
+proxmox:
+  url: https://198.51.100.10:8006
+  token_env: NEWTAB_PROXMOX_TOKEN   # user@realm!id=secret, read from the environment
+  attach: Hypervisor                # the link whose row shows them
+  insecure: true                    # it answers with its own certificate
+```
+
+The row then reads `16 · 29% · 51%`: guests running, cpu, memory. A token with
+`PVEAuditor` is enough, and the secret stays out of the config file.
 
 ## Status
 

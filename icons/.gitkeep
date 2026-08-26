@@ -1,0 +1,3 @@
+# newtab icons <config> fills this directory. A file dropped here by hand
+# always wins over the fetcher: name it after the link, lowercased and
+# hyphenated (Nginx Proxy Manager -> nginx-proxy-manager.svg).

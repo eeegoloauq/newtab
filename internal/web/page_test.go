@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/eeegoloauq/newtab/internal/config"
+	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
 )
 
@@ -25,7 +26,7 @@ func testConfig() *config.Config {
 }
 
 func TestRenderSplitsStyles(t *testing.T) {
-	body, err := render(testConfig(), status.Snapshot{})
+	body, err := render(testConfig(), status.Snapshot{}, proxmox.Stats{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestLiveRowsShowLatencyAndOutages(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			snap := status.Fixed(map[string]status.Check{"Music": tc.check})
-			tail, isDown := state(snap, config.Link{Name: "Music", URL: "https://music.example.com/", Check: "Music"}, text)
+			tail, isDown := state(snap, config.Link{Name: "Music", URL: "https://music.example.com/", Check: "Music"}, text, config.TailLatency)
 			if tail != tc.wantTail || isDown != tc.wantDown {
 				t.Fatalf("tail = %q down = %v, want %q %v", tail, isDown, tc.wantTail, tc.wantDown)
 			}
@@ -87,15 +88,42 @@ func TestLiveRowsShowLatencyAndOutages(t *testing.T) {
 
 	// A link with no check at all says nothing: an empty tail is honest,
 	// a question mark is not.
-	if tail, down := state(status.Snapshot{}, config.Link{Name: "Music", URL: "https://music.example.com/"}, text); tail != "" || down {
+	if tail, down := state(status.Snapshot{}, config.Link{Name: "Music", URL: "https://music.example.com/"}, text, config.TailLatency); tail != "" || down {
 		t.Fatalf("unmonitored link showed %q", tail)
+	}
+}
+
+// The default tail speaks only when something is off: a row that reads
+// 100% every day is furniture, and the eye stops seeing the day it does
+// not.
+func TestExceptionsTailIsQuietUntilItIsNot(t *testing.T) {
+	text := config.Text{Down: "down"}
+	link := config.Link{Name: "Music", URL: "https://music.example.com/", Check: "Music"}
+
+	perfect := status.Fixed(map[string]status.Check{"Music": {Up: true, LatencyMS: 23, Uptime24h: 1}})
+	if tail, _ := state(perfect, link, text, config.TailExceptions); tail != "" {
+		t.Fatalf("a perfect day said %q", tail)
+	}
+
+	dipped := status.Fixed(map[string]status.Check{"Music": {Up: true, LatencyMS: 23, Uptime24h: 0.9982}})
+	if tail, _ := state(dipped, link, text, config.TailExceptions); tail != "99.8% 24h" {
+		t.Fatalf("tail = %q, want 99.8%% 24h", tail)
+	}
+
+	// Rounding must not print 100% for a day that had an outage in it,
+	// nor 99.9% for a day that did not.
+	if got := percent(0.99999); got != "100%" {
+		t.Fatalf("percent(0.99999) = %q", got)
+	}
+	if got := percent(0.5); got != "50.0%" {
+		t.Fatalf("percent(0.5) = %q", got)
 	}
 }
 
 func TestRenderEscapes(t *testing.T) {
 	c := testConfig()
 	c.Sections[1].Links[0].Name = `<script>alert(1)</script>`
-	body, err := render(c, status.Snapshot{})
+	body, err := render(c, status.Snapshot{}, proxmox.Stats{})
 	if err != nil {
 		t.Fatal(err)
 	}

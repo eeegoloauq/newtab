@@ -42,6 +42,8 @@ type Config struct {
 	// its pronunciation on, so it belongs to the config that names the
 	// links, not to the code.
 	Lang string `yaml:"lang"`
+	// Proxmox attaches a hypervisor's own numbers to one row.
+	Proxmox Proxmox `yaml:"proxmox"`
 	// Status points at a lookout instance whose /api/status this page
 	// reads. Empty means the page shows no state at all: this is the one
 	// integration, and it is optional.
@@ -53,6 +55,30 @@ type Config struct {
 	Text     Text      `yaml:"text"`
 	Search   Search    `yaml:"search"`
 	Sections []Section `yaml:"sections"`
+}
+
+// Proxmox is a hypervisor to read three numbers from.
+type Proxmox struct {
+	URL string `yaml:"url"`
+	// TokenEnv names the environment variable holding
+	// user@realm!tokenid=secret. The secret is not in this file: the file
+	// is in version control and the secret is not.
+	TokenEnv string `yaml:"token_env"`
+	// Attach is the link name whose row carries the numbers. They belong
+	// on the row of the thing they describe, not in a panel of their own.
+	Attach string `yaml:"attach"`
+	Every  string `yaml:"every"`
+	// Insecure accepts the self-signed certificate a Proxmox box ships
+	// with. These are three read-only numbers on a LAN.
+	Insecure bool `yaml:"insecure"`
+}
+
+// PollEvery is Every parsed, or 30s.
+func (p Proxmox) PollEvery() time.Duration {
+	if d, err := time.ParseDuration(p.Every); err == nil && d > 0 {
+		return d
+	}
+	return 30 * time.Second
 }
 
 // Text is every user-visible string that does not come from the links.
@@ -74,10 +100,25 @@ type Text struct {
 // Status is the monitor to read. Nothing is ever written back to it.
 type Status struct {
 	URL string `yaml:"url"`
+	// Tail decides what a healthy row says. A number that is the same
+	// every day is not information, so the default speaks only when
+	// something is off.
+	Tail string `yaml:"tail"`
 	// Every is a duration like "30s". The page never waits on the
 	// monitor, so this only decides how stale the numbers can be.
 	Every string `yaml:"every"`
 }
+
+// What a healthy row may show.
+const (
+	// TailExceptions: nothing while the last day was perfect, the uptime
+	// figure once it was not.
+	TailExceptions = "exceptions"
+	TailLatency    = "latency"
+	TailUptime24h  = "uptime24h"
+	TailUptime7d   = "uptime7d"
+	TailQuiet      = "quiet"
+)
 
 // PollEvery is Every parsed, or 30s.
 func (s Status) PollEvery() time.Duration {
@@ -173,11 +214,25 @@ func (c *Config) applyDefaults() {
 	if c.Text.Down == "" {
 		c.Text.Down = defaultDown
 	}
+	if c.Status.Tail == "" {
+		c.Status.Tail = TailExceptions
+	}
 	for i := range c.Sections {
 		if c.Sections[i].Style == "" {
 			c.Sections[i].Style = StyleList
 		}
 	}
+}
+
+func (c *Config) hasLink(name string) bool {
+	for _, s := range c.Sections {
+		for _, l := range s.Links {
+			if l.Name == name {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *Config) validate() error {
@@ -194,9 +249,38 @@ func (c *Config) validate() error {
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 			return fmt.Errorf("status.url %q is not an http(s) URL", c.Status.URL)
 		}
+		switch c.Status.Tail {
+		case TailExceptions, TailLatency, TailUptime24h, TailUptime7d, TailQuiet:
+		default:
+			return fmt.Errorf("status.tail %q: expected one of %s, %s, %s, %s, %s",
+				c.Status.Tail, TailExceptions, TailLatency, TailUptime24h, TailUptime7d, TailQuiet)
+		}
 		if c.Status.Every != "" {
 			if _, err := time.ParseDuration(c.Status.Every); err != nil {
 				return fmt.Errorf("status.every %q is not a duration like 30s", c.Status.Every)
+			}
+		}
+	}
+	if c.Proxmox.URL != "" {
+		u, err := url.Parse(c.Proxmox.URL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("proxmox.url %q is not an http(s) URL", c.Proxmox.URL)
+		}
+		if c.Proxmox.TokenEnv == "" {
+			return fmt.Errorf("proxmox.token_env is not set: the token does not belong in this file")
+		}
+		if os.Getenv(c.Proxmox.TokenEnv) == "" {
+			return fmt.Errorf("$%s is empty: no Proxmox token to read with", c.Proxmox.TokenEnv)
+		}
+		if c.Proxmox.Attach == "" {
+			return fmt.Errorf("proxmox.attach is not set: name the link whose row shows the numbers")
+		}
+		if !c.hasLink(c.Proxmox.Attach) {
+			return fmt.Errorf("proxmox.attach %q is not a link in any section", c.Proxmox.Attach)
+		}
+		if c.Proxmox.Every != "" {
+			if _, err := time.ParseDuration(c.Proxmox.Every); err != nil {
+				return fmt.Errorf("proxmox.every %q is not a duration like 30s", c.Proxmox.Every)
 			}
 		}
 	}

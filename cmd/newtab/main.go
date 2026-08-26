@@ -13,6 +13,7 @@ import (
 
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
+	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
 	"github.com/eeegoloauq/newtab/internal/web"
 )
@@ -115,6 +116,14 @@ func fetchIcons(c *config.Config, force bool) error {
 	return nil
 }
 
+// ctxFor hands out a context for one background poller and records its
+// cancel, so run() can stop them all on the way out.
+func ctxFor(cancels *[]context.CancelFunc) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	*cancels = append(*cancels, cancel)
+	return ctx
+}
+
 func run(args []string) error {
 	if len(args) == 0 {
 		fmt.Print(usage)
@@ -181,17 +190,32 @@ func run(args []string) error {
 		}
 		// The monitor is polled on its own clock; a request never waits
 		// on it, and a monitor that is down costs this page nothing.
+		var cancels []context.CancelFunc
+		defer func() {
+			for _, cancel := range cancels {
+				cancel()
+			}
+		}()
 		var snapshot func() status.Snapshot
 		if c.Status.URL != "" {
 			p := &status.Poller{URL: c.Status.URL, Every: c.Status.PollEvery()}
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			go p.Run(ctx)
+			go p.Run(ctxFor(&cancels))
 			snapshot = p.Snapshot
+		}
+		var stats func() proxmox.Stats
+		if c.Proxmox.URL != "" {
+			p := &proxmox.Poller{
+				URL:      c.Proxmox.URL,
+				Token:    os.Getenv(c.Proxmox.TokenEnv),
+				Every:    c.Proxmox.PollEvery(),
+				Insecure: c.Proxmox.Insecure,
+			}
+			go p.Run(ctxFor(&cancels))
+			stats = p.Stats
 		}
 		srv := &http.Server{
 			Addr:              c.Listen,
-			Handler:           web.New(c, snapshot),
+			Handler:           web.New(c, snapshot, stats),
 			ReadHeaderTimeout: 5 * time.Second,
 		}
 		fmt.Printf("newtab %s on http://%s\n", version(), c.Listen)

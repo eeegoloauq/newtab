@@ -45,3 +45,18 @@ sections:
         url: https://www.youtube.com/
       - name: Reddit
         url: https://www.reddit.com/
+
+# Optional: what an uptime monitor knows, read-only. Rows match checks by
+# host, or by `check:` on the link.
+status:
+  url: http://monitor.example/api/status
+  every: 30s
+  tail: exceptions   # latency | uptime24h | uptime7d | quiet
+
+# Optional: a hypervisor's own numbers, on the row of the link that is it.
+proxmox:
+  url: https://198.51.100.10:8006
+  token_env: NEWTAB_PROXMOX_TOKEN
+  attach: Hypervisor
+  every: 30s
+  insecure: true

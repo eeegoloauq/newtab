@@ -14,6 +14,7 @@ import (
 
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
+	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
 )
 
@@ -86,14 +87,18 @@ type linkView struct {
 // render builds the whole document. Every section is a list and they all
 // flow through the same columns, in config order: the operator's order is
 // the reading order.
-func render(c *config.Config, snap status.Snapshot) ([]byte, error) { return build(c, false, snap) }
+func render(c *config.Config, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
+	return build(c, false, snap, pve)
+}
 
 // buildInline is the same page with every icon embedded as a data: URI,
 // so the result is a single file that works from disk, inside a browser
 // extension, or anywhere the server is not reachable.
-func buildInline(c *config.Config) ([]byte, error) { return build(c, true, status.Snapshot{}) }
+func buildInline(c *config.Config) ([]byte, error) {
+	return build(c, true, status.Snapshot{}, proxmox.Stats{})
+}
 
-func build(c *config.Config, inline bool, snap status.Snapshot) ([]byte, error) {
+func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
 	v := pageView{
 		Title:  c.Title,
 		Lang:   c.Lang,
@@ -114,7 +119,14 @@ func build(c *config.Config, inline bool, snap status.Snapshot) ([]byte, error) 
 				Key:  searchKey(l),
 			}
 			if s.Style == config.StyleLive {
-				lv.Tail, lv.Down = state(snap, l, c.Text)
+				lv.Tail, lv.Down = state(snap, l, c.Text, c.Status.Tail)
+			}
+			// The hypervisor's own numbers win the slot on its row: they
+			// say more about it than its latency ever will.
+			if l.Name == c.Proxmox.Attach && !lv.Down {
+				if tail := pve.Tail(); tail != "" {
+					lv.Tail = tail
+				}
 			}
 			if store.Valid(l.Name) {
 				lv.Icon = template.URL("/icon/" + icons.Slug(l.Name))
@@ -144,19 +156,45 @@ func build(c *config.Config, inline bool, snap status.Snapshot) ([]byte, error) 
 // state turns a monitor check into the two things a row shows. A link
 // with no check says nothing at all: an empty tail is honest, a "?" is
 // not.
-func state(snap status.Snapshot, l config.Link, text config.Text) (tail string, down bool) {
+func state(snap status.Snapshot, l config.Link, text config.Text, policy string) (tail string, down bool) {
 	check, ok := snap.Lookup(l.Check, l.URL)
 	switch {
 	case !ok || check.Muted:
 		return "", false
 	case !check.Up:
 		return strings.TrimSpace(text.Down + " " + compact(check.Down)), true
-	case check.LatencyMS > 0:
-		return strconv.Itoa(check.LatencyMS) + " ms", false
 	}
-	// A probe that landed inside a millisecond reports zero, which is not
-	// "no answer" — that row deserves a number like every other.
-	return "<1 ms", false
+	switch policy {
+	case config.TailQuiet:
+		return "", false
+	case config.TailLatency:
+		if check.LatencyMS > 0 {
+			return strconv.Itoa(check.LatencyMS) + " ms", false
+		}
+		// A probe that landed inside a millisecond reports zero, which is
+		// not "no answer" — that row deserves a number like every other.
+		return "<1 ms", false
+	case config.TailUptime24h:
+		return percent(check.Uptime24h) + " 24h", false
+	case config.TailUptime7d:
+		return percent(check.Uptime7d) + " 7d", false
+	}
+	// Exceptions, the default: a row that has been up all day says
+	// nothing. A number that reads 100% every day is furniture, and the
+	// eye stops seeing the one day it does not.
+	if check.Uptime24h > 0 && check.Uptime24h < 1 {
+		return percent(check.Uptime24h) + " 24h", false
+	}
+	return "", false
+}
+
+// percent writes a ratio the way it would be read aloud: 100%, 99.8%.
+func percent(ratio float64) string {
+	v := ratio * 100
+	if v >= 99.95 {
+		return "100%"
+	}
+	return strconv.FormatFloat(v, 'f', 1, 64) + "%"
 }
 
 // compact writes a duration the way someone glancing at it would say it.
