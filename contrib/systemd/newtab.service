@@ -1,0 +1,41 @@
+[Unit]
+Description=newtab start page
+Documentation=file:///usr/share/doc/newtab/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=newtab
+Group=newtab
+# The config and the icons are the only files it touches, and it writes
+# to neither while running: `newtab icons` fills the icon directory.
+ConfigurationDirectory=newtab
+StateDirectory=newtab
+WorkingDirectory=/var/lib/newtab
+ExecStart=/usr/bin/newtab run /etc/newtab/config.yaml
+# The Proxmox token, if the page reads one. Mode 0600 — systemd will not
+# chmod it for you.
+EnvironmentFile=-/etc/newtab/newtab.env
+Restart=on-failure
+RestartSec=5s
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+PrivateDevices=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -120,6 +120,22 @@ func TestExceptionsTailIsQuietUntilItIsNot(t *testing.T) {
 	}
 }
 
+// Three bare numbers fit the column; the tooltip is where they are
+// named, because the row has no room for words.
+func TestHypervisorNumbersAreTerseWithASpelledOutHint(t *testing.T) {
+	text := config.Text{Guests: "running", CPU: "cpu", Memory: "memory"}
+	tail, hint := hypervisor(proxmox.Stats{Running: 16, CPU: 29, Memory: 51, OK: true}, text)
+	if tail != "16 · 29% · 51%" {
+		t.Fatalf("tail = %q", tail)
+	}
+	if len([]rune(tail)) > 20 {
+		t.Fatalf("tail %q will be cut off in the column", tail)
+	}
+	if hint != "16 running · 29% cpu · 51% memory" {
+		t.Fatalf("hint = %q", hint)
+	}
+}
+
 func TestRenderEscapes(t *testing.T) {
 	c := testConfig()
 	c.Sections[1].Links[0].Name = `<script>alert(1)</script>`

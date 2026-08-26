@@ -90,6 +90,12 @@ type Text struct {
 	// Down is the word a row shows while its check is failing, before
 	// how long it has been failing.
 	Down string `yaml:"down"`
+	// Guests, CPU and Memory name the hypervisor's three numbers. They
+	// appear only in the tooltip: the row itself has no space for words,
+	// and three bare numbers need saying once.
+	Guests string `yaml:"guests"`
+	CPU    string `yaml:"cpu"`
+	Memory string `yaml:"memory"`
 	// Opens and WebSearch are announced to a screen reader as the filter
 	// narrows: what Enter would open, or that it would go to the engine.
 	// A sighted reader sees the same thing as an underline.
@@ -160,6 +166,9 @@ const (
 	defaultOpens     = "Opens"
 	defaultWebSearch = "Search the web"
 	defaultDown      = "down"
+	defaultGuests    = "running"
+	defaultCPU       = "cpu"
+	defaultMemory    = "memory"
 	defaultTitle     = "newtab"
 	defaultListen    = "127.0.0.1:5669"
 	defaultEngine    = "https://www.google.com/search?q=%s"
@@ -213,6 +222,15 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Text.Down == "" {
 		c.Text.Down = defaultDown
+	}
+	if c.Text.Guests == "" {
+		c.Text.Guests = defaultGuests
+	}
+	if c.Text.CPU == "" {
+		c.Text.CPU = defaultCPU
+	}
+	if c.Text.Memory == "" {
+		c.Text.Memory = defaultMemory
 	}
 	if c.Status.Tail == "" {
 		c.Status.Tail = TailExceptions

@@ -58,19 +58,8 @@ func TestFetchReadsTheThreeNumbers(t *testing.T) {
 // an idle hypervisor, which is a different claim from "not known yet".
 func TestStatsBeforeAPollSayNothing(t *testing.T) {
 	var p Poller
-	if tail := p.Stats().Tail(); tail != "" {
-		t.Fatalf("unpolled stats said %q", tail)
-	}
-}
-
-func TestTailFitsOneColumn(t *testing.T) {
-	got := Stats{Running: 16, CPU: 29, Memory: 51, OK: true}.Tail()
-	if got != "16 · 29% · 51%" {
-		t.Fatalf("tail = %q", got)
-	}
-	// The slot is about twenty characters wide before it truncates.
-	if len([]rune(got)) > 20 {
-		t.Fatalf("tail %q is %d characters and will be cut off", got, len([]rune(got)))
+	if s := p.Stats(); s.OK {
+		t.Fatalf("unpolled stats claimed to know something: %+v", s)
 	}
 }
 

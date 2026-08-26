@@ -33,7 +33,7 @@
         >{{if .Icon}}<img class="ico" src="{{.Icon}}" alt="" width="20" height="20"
         >{{else}}<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#globe"/></svg>{{end
         }}<span class="name">{{.Name}}</span
-        >{{if .Tail}}<span class="tail">{{.Tail}}</span>{{end}}</a></li>
+        >{{if .Tail}}<span class="tail"{{if .TailHint}} title="{{.TailHint}}"{{end}}>{{.Tail}}</span>{{end}}</a></li>
     {{end}}
     </ul>
   </section>

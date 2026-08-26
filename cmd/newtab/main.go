@@ -3,9 +3,11 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -67,6 +69,7 @@ const usage = `newtab — start page
                                         write the page to a file; -inline
                                         embeds the icons so the file stands alone
   newtab icons [-force] <config.yaml>   fetch each site's own icon into icon_dir
+  newtab demo [-write out.html]         the page on made-up state, for a look
   newtab version
 `
 
@@ -124,6 +127,54 @@ func ctxFor(cancels *[]context.CancelFunc) context.Context {
 	return ctx
 }
 
+//go:embed all:demo.yaml
+var demoConfig []byte
+
+// demo serves or writes the page against invented state, so the shipped
+// screenshot and a first look both show what a monitor and a hypervisor
+// add — without either of them existing.
+func demo(args []string) error {
+	dir, err := os.MkdirTemp("", "newtab-demo")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir)
+	path := filepath.Join(dir, "demo.yaml")
+	if err := os.WriteFile(path, demoConfig, 0o600); err != nil {
+		return err
+	}
+	c, err := config.Load(path)
+	if err != nil {
+		return err
+	}
+	if iconDir := os.Getenv("NEWTAB_DEMO_ICONS"); iconDir != "" {
+		c.IconDir = iconDir
+	}
+	snap := status.Fixed(map[string]status.Check{
+		"Files":  {Name: "Files", Up: true, LatencyMS: 4, Uptime24h: 1},
+		"Photos": {Name: "Photos", Up: true, LatencyMS: 21, Uptime24h: 0.9982},
+		"Music":  {Name: "Music", Up: true, LatencyMS: 8, Uptime24h: 1},
+		"Git":    {Name: "Git", Down: 20 * time.Minute, Uptime24h: 0.986},
+	})
+	pve := proxmox.Stats{Running: 16, CPU: 29, Memory: 51, OK: true}
+	writing := len(args) == 2 && args[0] == "-write"
+	// A written demo is opened from disk, where /icon/... leads nowhere.
+	body, err := web.Demo(c, snap, pve, writing)
+	if err != nil {
+		return err
+	}
+	if writing {
+		return os.WriteFile(args[1], body, 0o644)
+	}
+	http.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(body)
+	})
+	fmt.Printf("newtab demo on http://%s\n", c.Listen)
+	srv := &http.Server{Addr: c.Listen, ReadHeaderTimeout: 5 * time.Second}
+	return srv.ListenAndServe()
+}
+
 func run(args []string) error {
 	if len(args) == 0 {
 		fmt.Print(usage)
@@ -163,6 +214,8 @@ func run(args []string) error {
 			return fmt.Errorf("icon_dir is not set in the config")
 		}
 		return fetchIcons(c, force)
+	case "demo":
+		return demo(args[1:])
 	case "render":
 		inline := len(args) > 1 && args[1] == "-inline"
 		if inline {

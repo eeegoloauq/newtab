@@ -126,15 +126,3 @@ func (p *Poller) fetch(ctx context.Context, client *http.Client) (Stats, error) 
 	s.OK = true
 	return s, nil
 }
-
-// Tail is the three numbers as one string, or "" when nothing has been
-// read yet.
-func (s Stats) Tail() string {
-	if !s.OK {
-		return ""
-	}
-	// Terse on purpose: the slot is one column wide, and "16 up · 29%
-	// cpu · 51% ram" was cut off mid-word. On the hypervisor's own row,
-	// guests then cpu then memory needs no labels.
-	return fmt.Sprintf("%d · %d%% · %d%%", s.Running, s.CPU, s.Memory)
-}

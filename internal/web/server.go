@@ -87,6 +87,15 @@ func iconHandler(dir string) http.HandlerFunc {
 	}
 }
 
+// Demo renders the page against state a caller invented. It exists for
+// `newtab demo`, which is how the screenshots are taken and how someone
+// can see what the monitor adds before wiring one up.
+// With inline set the icons are embedded, so the file stands on its own
+// wherever it is opened.
+func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, inline bool) ([]byte, error) {
+	return build(c, inline, snap, pve)
+}
+
 // Render returns the page as a file. With inline set, the icons are
 // embedded in it and the result needs nothing else — no server, no
 // network, no icon directory.

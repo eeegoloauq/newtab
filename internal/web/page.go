@@ -6,6 +6,7 @@ package web
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"html/template"
 	"net/url"
 	"strconv"
@@ -71,6 +72,10 @@ type linkView struct {
 	// this colour and in the tail, because colour alone is not something
 	// every reader can see.
 	Down bool
+	// TailHint explains the tail on hover. Three bare numbers are terse
+	// enough to fit the column and too terse to be obvious the first
+	// time, and a tooltip costs the page nothing until it is asked for.
+	TailHint string
 	// Tail is what a live row carries after the name: how long it has
 	// been down, or a number about the thing itself. The host used to go
 	// here and was removed — a truncated photo.cdn.egor-solo… told the
@@ -123,10 +128,8 @@ func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stat
 			}
 			// The hypervisor's own numbers win the slot on its row: they
 			// say more about it than its latency ever will.
-			if l.Name == c.Proxmox.Attach && !lv.Down {
-				if tail := pve.Tail(); tail != "" {
-					lv.Tail = tail
-				}
+			if l.Name == c.Proxmox.Attach && !lv.Down && pve.OK {
+				lv.Tail, lv.TailHint = hypervisor(pve, c.Text)
 			}
 			if store.Valid(l.Name) {
 				lv.Icon = template.URL("/icon/" + icons.Slug(l.Name))
@@ -186,6 +189,15 @@ func state(snap status.Snapshot, l config.Link, text config.Text, policy string)
 		return percent(check.Uptime24h) + " 24h", false
 	}
 	return "", false
+}
+
+// hypervisor writes the three numbers twice: terse for the column, and
+// spelled out for the tooltip.
+func hypervisor(s proxmox.Stats, text config.Text) (tail, hint string) {
+	tail = fmt.Sprintf("%d · %d%% · %d%%", s.Running, s.CPU, s.Memory)
+	hint = fmt.Sprintf("%d %s · %d%% %s · %d%% %s",
+		s.Running, text.Guests, s.CPU, text.CPU, s.Memory, text.Memory)
+	return tail, hint
 }
 
 // percent writes a ratio the way it would be read aloud: 100%, 99.8%.

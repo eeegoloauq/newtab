@@ -6,7 +6,7 @@
 
 title: newtab
 listen: 127.0.0.1:5669
-icon_dir: ./icons
+icon_dir: ""
 columns: 4
 
 search:
@@ -23,13 +23,17 @@ sections:
         url: https://198.51.100.10:8006/
       - name: Files
         url: https://files.example.com/
+        check: Files
       - name: Photos
         url: https://photos.example.com/
         alias: [pictures]
+        check: Photos
       - name: Music
         url: https://music.example.com/
+        check: Music
       - name: Git
         url: http://198.51.100.12:3000/
+        check: Git
 
   # style: list — plain bookmarks. Icon, name, nothing else.
   - name: Read
@@ -96,20 +100,7 @@ sections:
       - name: xkcd
         url: https://xkcd.com/
 
-# Optional. What an uptime monitor knows, read-only. Rows match checks by
-# the host they point at, or by `check:` on the link.
-status:
-  url: http://198.51.100.20:5665/api/status
-  every: 30s
-  # exceptions: say nothing while the last day was perfect.
-  # Also: latency, uptime24h, uptime7d, quiet.
-  tail: exceptions
-
-# Optional. Three numbers from a hypervisor, on the row of the link that
-# is it. The token is read from the environment, never from this file.
+# The demo invents the state a monitor would report; only the row that
+# carries the hypervisor numbers has to be named here.
 proxmox:
-  url: https://198.51.100.10:8006
-  token_env: NEWTAB_PROXMOX_TOKEN
   attach: Hypervisor
-  every: 30s
-  insecure: true
