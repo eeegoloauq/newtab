@@ -18,6 +18,72 @@ chrome.storage.local.get({ url: '', colour: '' }, function (local) {
   });
 });
 
+// Asking the page what colour it is, instead of asking the reader to
+// type it: the address is one permission prompt away, and the page
+// publishes the colour in its manifest and in a meta tag. Refused
+// permission is not an error — the field below still works by hand.
+function learnColour(url) {
+  var origin;
+  try {
+    origin = new URL(url).origin + '/*';
+  } catch (e) {
+    return;
+  }
+  chrome.permissions.request({ origins: [origin] }, function (granted) {
+    if (!granted) {
+      colourState.textContent = 'not allowed to ask the page — set it below if you like';
+      return;
+    }
+    fetch(new URL('/manifest.webmanifest', url).href)
+      .then(function (r) { return r.json(); })
+      .then(function (doc) {
+        var found = doc.background_color || doc.theme_color || '';
+        if (!/^#[0-9a-f]{6}$/i.test(found)) { throw new Error('no colour'); }
+        colour.value = found;
+        chrome.storage.local.set({ colour: found });
+        chrome.storage.sync.set({ colour: found });
+        colourState.textContent = 'taken from the page: ' + found;
+        if (doc.background_image) {
+          keepPicture(new URL(doc.background_image, url).href);
+        } else {
+          // No picture any more: forget the one we were holding.
+          chrome.storage.local.remove('picture');
+        }
+      })
+      .catch(function () {
+        colourState.textContent = 'the page did not say — set it below if you like';
+      });
+  });
+}
+
+// The picture itself, kept here rather than fetched on every new tab.
+// The address carries the file's digest, so a changed wallpaper is a
+// changed address and this replaces itself; an unchanged one is never
+// fetched twice. Only in local storage: sync has room for settings, not
+// for photographs.
+function keepPicture(href) {
+  chrome.storage.local.get({ picture: null }, function (held) {
+    if (held.picture && held.picture.href === href) {
+      return;
+    }
+    fetch(href)
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        if (blob.size > 4 * 1024 * 1024) { throw new Error('too big to hold'); }
+        return new Promise(function (ok, no) {
+          var reader = new FileReader();
+          reader.onload = function () { ok(reader.result); };
+          reader.onerror = no;
+          reader.readAsDataURL(blob);
+        });
+      })
+      .then(function (data) {
+        chrome.storage.local.set({ picture: { href: href, data: data } });
+      })
+      .catch(function () { chrome.storage.local.remove('picture'); });
+  });
+}
+
 colour.addEventListener('input', function () {
   var value = colour.value.trim();
   if (value !== '' && !/^#[0-9a-f]{6}$/i.test(value)) {
@@ -48,7 +114,10 @@ field.addEventListener('input', function () {
     return;
   }
   chrome.storage.local.set({ url: url });
-  chrome.storage.sync.set({ url: url }, function () { show(url); });
+  chrome.storage.sync.set({ url: url }, function () {
+    show(url);
+    if (url !== '') { learnColour(url); }
+  });
 });
 
 tryIt.addEventListener('click', function () {

@@ -105,13 +105,7 @@ func manifest(c *config.Config) []byte {
 	// The colour a browser paints before the page has drawn anything:
 	// the theme's own background, or the picture's mean colour when
 	// there is a picture, so the wait is the same colour as the page.
-	colour := c.Theme.Background
-	if colour == "" {
-		colour = "#141312"
-	}
-	if c.Average != "" {
-		colour = darken(c.Average, c.Theme.ImageDim)
-	}
+	colour := canvasColour(c)
 	doc := map[string]any{
 		"name":             c.Title,
 		"short_name":       c.Title,
@@ -123,6 +117,13 @@ func manifest(c *config.Config) []byte {
 			{"src": "/app-192.png", "sizes": "192x192", "type": "image/png"},
 			{"src": "/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
 		},
+	}
+	// Not part of the manifest standard, and browsers ignore what they do
+	// not know: it is here so a browser extension opening this page can
+	// paint the same picture while it waits, instead of a flat colour
+	// that turns into a photograph a moment later.
+	if c.Theme.Image != "" {
+		doc["background_image"] = backgroundPath(c.Fingerprint)
 	}
 	body, _ := json.Marshal(doc)
 	return body

@@ -52,6 +52,10 @@ type pageView struct {
 	// nowhere to fetch /favicon.svg from, and a tab with no icon looks
 	// like a page that failed to load.
 	Favicon template.URL
+	// Colour is what the page paints its canvas with, announced in the
+	// head so a browser — or an extension opening this page — can paint
+	// the same thing while it waits.
+	Colour string
 	// Scheme is what the browser paints before the stylesheet is parsed.
 	// Getting it wrong is a black flash on a light page and a white one
 	// on a dark page, and it is decided by one word in the head.
@@ -187,6 +191,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Favicon:    faviconHref(inline),
 		Background: backgroundHref(c, inline),
 		Scheme:     scheme(c.Theme.Background),
+		Colour:     canvasColour(c),
 		Prefixes:   prefixJSON(c.Search.Prefixes),
 	}
 	// A page built as a file has no server behind it to have polled
@@ -371,6 +376,18 @@ func darken(hex string, dim float64) string {
 	}
 	k := 1 - dim
 	return fmt.Sprintf("#%02x%02x%02x", int(float64(r)*k), int(float64(g)*k), int(float64(b)*k))
+}
+
+// canvasColour is the page's own background: the theme's colour, or the
+// picture's mean colour darkened the way the picture is.
+func canvasColour(c *config.Config) string {
+	if c.Average != "" {
+		return darken(c.Average, c.Theme.ImageDim)
+	}
+	if c.Theme.Background != "" {
+		return c.Theme.Background
+	}
+	return "#141312"
 }
 
 // scheme reads the configured background and says whether the page is a
