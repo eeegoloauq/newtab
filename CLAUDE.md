@@ -88,5 +88,7 @@ tests are data, not prose: they cover the slug path and should stay.
 What has been tried and thrown away is in [docs/design.md](docs/design.md).
 Read it before reintroducing tiles, monograms or a database.
 
-Commit messages are a sentence saying what changed and why, in English, present
-tense, no prefix tags.
+Commit messages are one line: what changed and why, English, present tense, no
+prefix tags. No body — the reason belongs in a comment next to the code, where
+the next reader will actually be. A body is for the rare decision that has no
+such place: a revert and what caused it.
