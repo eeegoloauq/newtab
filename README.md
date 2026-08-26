@@ -49,15 +49,21 @@ rows can show state. Full example: [config.example.yaml](config.example.yaml).
 
 ## Looks
 
-Colours, type size, columns and a background image are config.
+Colours, type size, columns and a background image are config: the default, a
+light palette, a photograph.
+
+![Three looks](docs/looks/looks.png)
 
 ```yaml
-columns: 3
+columns: 4
 theme:
-  font_size: 21
+  background: "#f6f3ec"     # any of these can be left out
+  ink: "#22201c"
+  muted: "#6b6459"
+  font_size: 17
+  image: /var/lib/newtab/hills.jpg
+  image_dim: 0.75           # validate measures the picture and says if this is too low
 ```
-
-![Larger type](docs/looks/big.png)
 
 `newtab demo -config yours.yaml` renders your config against invented state —
 how these were taken, and how to see a down row without waiting for one.

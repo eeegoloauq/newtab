@@ -47,10 +47,17 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Write(body)
 	})
-	// Asked for on every visit. 204 is "no icon", which keeps the console
-	// quiet without shipping an asset.
+	// A browser that ignores the <link> asks for this by name; one that
+	// reads it gets the SVG, which is sharp at any tab size.
+	mux.HandleFunc("GET /favicon.svg", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Header().Set("Cache-Control", "public, max-age=604800")
+		w.Write([]byte(FaviconSVG))
+	})
 	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=604800")
+		w.Write(AppIcon(192))
 	})
 	mux.HandleFunc("GET /icon/{slug}", iconHandler(c.IconDir))
 	// A phone that is told to add this to the home screen needs a name,

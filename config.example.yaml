@@ -3,7 +3,7 @@
 # config.
 
 title: newtab
-listen: 127.0.0.1:5669
+listen: 127.0.0.1:5669   # 0.0.0.0:5669 in a container
 icon_dir: ./icons
 columns: 4
 

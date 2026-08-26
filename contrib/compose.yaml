@@ -1,0 +1,24 @@
+# docker compose up -d
+#
+# The config and the icons live on the host: the config because you edit
+# it, the icons because fetching them again on every deploy would be a
+# needless visit to forty other people's servers.
+services:
+  newtab:
+    image: ghcr.io/eeegoloauq/newtab:latest
+    # or: build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5669:5669"
+    volumes:
+      - ./config.yaml:/etc/newtab/config.yaml:ro
+      - newtab-icons:/var/lib/newtab
+    # Only if the page reads a Proxmox host.
+    # environment:
+    #   NEWTAB_PROXMOX_TOKEN: user@pve!id=secret
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  newtab-icons:

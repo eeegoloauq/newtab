@@ -18,6 +18,18 @@ var (
 	iconPNG  = map[int][]byte{}
 )
 
+// FaviconSVG is the same motif as a scalable icon: four rows, the first
+// one shorter and quieter, drawn in the page's own inks. An SVG because
+// a tab icon is 16 CSS pixels on one screen and 32 on the next, and a
+// bitmap has to pick one.
+const FaviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">` +
+	`<rect width="32" height="32" rx="7" fill="#141312"/>` +
+	`<g fill="#8a8478"><rect x="7" y="9" width="4" height="2.6" rx="1"/><rect x="13" y="9" width="12" height="2.6" rx="1.3"/></g>` +
+	`<g fill="#e8e4da">` +
+	`<rect x="7" y="14.2" width="4" height="2.6" rx="1"/><rect x="13" y="14.2" width="9" height="2.6" rx="1.3"/>` +
+	`<rect x="7" y="19.4" width="4" height="2.6" rx="1"/><rect x="13" y="19.4" width="12" height="2.6" rx="1.3"/>` +
+	`</g></svg>`
+
 // AppIcon returns a square PNG of the given size for the web app manifest
 // and for the icon a phone puts on its home screen.
 func AppIcon(size int) []byte {
