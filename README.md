@@ -44,7 +44,8 @@ every launch; the new tab page itself can only be replaced by an extension, see
 below.
 
 **Firefox, desktop.** Settings → Home → Homepage and new windows → Custom URLs.
-Firefox also lets you set the new tab there, without an extension.
+The New Tab setting there offers only Firefox Home or a blank page, so replacing
+the new tab needs an extension in Firefox too.
 
 **Android.** Chrome → Settings → Homepage → enter the address; the home button
 then opens it. Or open the page and use ⋮ → Add to Home screen: it installs as
