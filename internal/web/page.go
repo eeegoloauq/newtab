@@ -109,7 +109,7 @@ type linkView struct {
 	TailHint string
 	// Tail is what a live row carries after the name: how long it has
 	// been down, or a number about the thing itself. The host used to go
-	// here and was removed — a truncated photo.cdn.egor-solo… told the
+	// here and was removed — a truncated photos.example.com… told the
 	// reader nothing they did not already know from the name. The slot
 	// stays because it is the one place on the page where a value goes,
 	// and it is the same slot on every row so the columns stay straight.

@@ -4,8 +4,10 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -71,8 +73,11 @@ const usage = `newtab — start page
                                         write the page to a file; -inline
                                         embeds the icons so the file stands alone
   newtab icons [-force] <config.yaml>   fetch each site's own icon into icon_dir
-  newtab extension <config.yaml> <dir>  write a browser extension that makes
-                                        this page the new tab
+  newtab extension [-url http://host] <config.yaml> <dir>
+                                        write a browser extension that makes
+                                        this page the new tab; with -url it
+                                        opens the running server instead of a
+                                        snapshot
   newtab demo [-config c.yaml] [-write out.html]
                                         the page on made-up state, for a look
                                         or for previewing a config of your own
@@ -164,18 +169,36 @@ var manifestJSON []byte
 // as an unpacked extension. The page is the same page, with its icons
 // embedded and its script in a file: an extension page refuses an inline
 // script, and nothing here may reach the network anyway.
-func writeExtension(c *config.Config, dir string) error {
+func writeExtension(c *config.Config, dir, live string) error {
 	page, script, err := web.Extension(c, "newtab.js")
 	if err != nil {
 		return err
+	}
+	manifest := manifestJSON
+	if live != "" {
+		u, err := url.Parse(live)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("-url %q is not an http(s) address", live)
+		}
+		// A live tab is a redirect and nothing else: the page it lands
+		// on is the real one, with the monitor behind it.
+		page = []byte("<!doctype html><meta charset=utf-8><title>" + c.Title +
+			"</title><meta http-equiv=refresh content=\"0; url=" + u.String() + "\">")
+		script = nil
+		manifest, err = withHomepage(manifestJSON, u.String())
+		if err != nil {
+			return err
+		}
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	files := map[string][]byte{
-		"manifest.json": manifestJSON,
+		"manifest.json": manifest,
 		"newtab.html":   page,
-		"newtab.js":     script,
+	}
+	if script != nil {
+		files["newtab.js"] = script
 	}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
@@ -184,6 +207,17 @@ func writeExtension(c *config.Config, dir string) error {
 	}
 	fmt.Printf("wrote %s — load it as an unpacked extension\n", dir)
 	return nil
+}
+
+// withHomepage adds the home button override, which Chrome only accepts
+// as a real URL — an extension page cannot be a homepage, only a new tab.
+func withHomepage(manifest []byte, live string) ([]byte, error) {
+	var doc map[string]any
+	if err := json.Unmarshal(manifest, &doc); err != nil {
+		return nil, err
+	}
+	doc["chrome_settings_overrides"] = map[string]any{"homepage": live}
+	return json.MarshalIndent(doc, "", "  ")
 }
 
 //go:embed all:demo.yaml
@@ -196,10 +230,8 @@ func demo(args []string) error {
 	// -config previews a config of your own against the same invented
 	// state, which is the only way to see a down row without waiting for
 	// something to break.
-	path := ""
-	if len(args) >= 2 && args[0] == "-config" {
-		path, args = args[1], args[2:]
-	}
+	path, args := takeValue(append([]string{"demo"}, args...), "-config")
+	args = args[1:]
 	if path == "" {
 		dir, err := os.MkdirTemp("", "newtab-demo")
 		if err != nil {
@@ -253,6 +285,37 @@ func demo(args []string) error {
 	return srv.ListenAndServe()
 }
 
+// takeFlag and takeValue read one option from anywhere in the argument
+// list and return the rest. They copy rather than reslice: appending
+// over the same backing array quietly rewrote the arguments that had not
+// been read yet, and the value read a line earlier came back wrong.
+func takeFlag(args []string, name string) (bool, []string) {
+	rest := make([]string, 0, len(args))
+	found := false
+	for _, a := range args {
+		if a == name {
+			found = true
+			continue
+		}
+		rest = append(rest, a)
+	}
+	return found, rest
+}
+
+func takeValue(args []string, name string) (string, []string) {
+	rest := make([]string, 0, len(args))
+	value := ""
+	for i := 0; i < len(args); i++ {
+		if args[i] == name && i+1 < len(args) {
+			value = args[i+1]
+			i++
+			continue
+		}
+		rest = append(rest, args[i])
+	}
+	return value, rest
+}
+
 func run(args []string) error {
 	if len(args) == 0 {
 		fmt.Print(usage)
@@ -280,10 +343,7 @@ func run(args []string) error {
 		}
 		return nil
 	case "icons":
-		force := len(args) > 1 && args[1] == "-force"
-		if force {
-			args = append(args[:1], args[2:]...)
-		}
+		force, args := takeFlag(args, "-force")
 		if len(args) < 2 {
 			return fmt.Errorf("icons needs a config file")
 		}
@@ -296,6 +356,7 @@ func run(args []string) error {
 		}
 		return fetchIcons(c, force)
 	case "extension":
+		live, args := takeValue(args, "-url")
 		if len(args) < 3 {
 			return fmt.Errorf("extension needs a config file and a directory")
 		}
@@ -303,14 +364,11 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		return writeExtension(c, args[2])
+		return writeExtension(c, args[2], live)
 	case "demo":
 		return demo(args[1:])
 	case "render":
-		inline := len(args) > 1 && args[1] == "-inline"
-		if inline {
-			args = append(args[:1], args[2:]...)
-		}
+		inline, args := takeFlag(args, "-inline")
 		if len(args) < 3 {
 			return fmt.Errorf("render needs a config file and an output file")
 		}

@@ -49,25 +49,7 @@ rows can show state. Full example: [config.example.yaml](config.example.yaml).
 
 ## Looks
 
-Colours, type size, columns and a background are config.
-
-```yaml
-theme:
-  background: "#f6f3ec"
-  ink: "#22201c"
-  muted: "#6b6459"
-  down: "#b3261e"
-```
-
-![Light](docs/looks/light.png)
-
-```yaml
-theme:
-  image: /var/lib/newtab/lofoten.jpg
-  image_dim: 0.75      # how much of it is shaded
-```
-
-![With a background](docs/looks/photo.png)
+Colours, type size, columns and a background image are config.
 
 ```yaml
 columns: 3

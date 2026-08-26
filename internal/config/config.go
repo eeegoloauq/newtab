@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/eeegoloauq/newtab/internal/backdrop"
 	"github.com/goccy/go-yaml"
 )
 
@@ -401,6 +402,14 @@ func (c *Config) validate() error {
 		info, err := os.Stat(c.Theme.Image)
 		if err != nil {
 			return fmt.Errorf("theme.image %q: %w", c.Theme.Image, err)
+		}
+		// Measured advice, not a decision: where the text falls on the
+		// picture depends on the window, so the number is an estimate
+		// and the operator is the one looking at the result.
+		if want, err := backdrop.Recommend(c.Theme.Image); err == nil && c.Theme.ImageDim+0.02 < want {
+			c.Notes = append(c.Notes, fmt.Sprintf(
+				"theme.image_dim is %.2f; this picture is bright enough to need about %.2f for the group headings to stay readable",
+				c.Theme.ImageDim, want))
 		}
 		// Not an error: it is the operator's screen and their bandwidth.
 		// But the page is opened dozens of times a day, and a background
