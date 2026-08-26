@@ -49,7 +49,10 @@ sections:
 ```
 
 Icons come from the sites themselves, never through a favicon service: asking
-one for forty icons hands it your list of links. A site that serves none gets
+one for forty icons hands it your list of links. They are fetched once and read
+from disk after that — a running server also picks up icons for links you have
+just added, in the background, so adding a link is editing the config and
+nothing else. Rendering never waits on the network. A site that serves none gets
 the globe a browser would draw, and a file you drop into `icon_dir` yourself
 always beats the fetcher.
 

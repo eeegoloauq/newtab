@@ -33,7 +33,10 @@ somewhere.
 No icon is fetched from a third party. Favicons through a search engine leak
 the whole link list to it; icons are served from here or not at all.
 
-`newtab icons` walks to every URL in the config, with a browser's user agent
+Icons are fetched ahead of time, never while a page is being served. A server
+that renders by proxying an icon on demand would make the first paint wait on
+forty other people's websites, and would hand every one of them the moment you
+open your browser. `newtab icons` walks to every URL in the config, with a browser's user agent
 and with TLS verification off. Both are deliberate: sites behind a bot filter
 answer 403 to anything less, and half the boxes on a home LAN serve a
 self-signed certificate. It follows that stored icons are untrusted bytes, so

@@ -88,7 +88,11 @@ func main() {
 // run.
 const perLink = 25 * time.Second
 
-func fetchIcons(c *config.Config, force bool) error {
+func fetchIcons(c *config.Config, force bool) error { return fetchIconsQuiet(c, force, false) }
+
+// fetchIconsQuiet is the same walk without the per-link chatter, for the
+// background pass a running server makes.
+func fetchIconsQuiet(c *config.Config, force, quiet bool) error {
 	store := icons.Store{Dir: c.IconDir}
 	var missing []string
 	tried := 0
@@ -110,17 +114,27 @@ func fetchIcons(c *config.Config, force bool) error {
 			cancel()
 			if err != nil {
 				missing = append(missing, l.Name)
-				fmt.Printf("  -- %-22s %v\n", l.Name, err)
+				if !quiet {
+					fmt.Printf("  -- %-22s %v\n", l.Name, err)
+				}
 				continue
 			}
-			fmt.Printf("  ok %-22s\n", l.Name)
+			if !quiet {
+				fmt.Printf("  ok %-22s\n", l.Name)
+			}
 		}
 	}
-	fmt.Printf("%d without an icon", len(missing))
-	if len(missing) > 0 {
-		fmt.Printf(": %s", strings.Join(missing, ", "))
+	if quiet {
+		if len(missing) > 0 {
+			fmt.Printf("icons: %d without one: %s\n", len(missing), strings.Join(missing, ", "))
+		}
+	} else {
+		fmt.Printf("%d without an icon", len(missing))
+		if len(missing) > 0 {
+			fmt.Printf(": %s", strings.Join(missing, ", "))
+		}
+		fmt.Println()
 	}
-	fmt.Println()
 	// Silence plus exit 0 from a cron job means "all good". Every single
 	// fetch failing is the opposite, and usually means no egress.
 	if tried > 0 && len(missing) == tried {
@@ -280,6 +294,17 @@ func run(args []string) error {
 			Addr:              c.Listen,
 			Handler:           web.New(c, snapshot, stats),
 			ReadHeaderTimeout: 5 * time.Second,
+		}
+		// Icons for links added since the last run are fetched in the
+		// background, so adding a link is editing the config and nothing
+		// else. Rendering still reads only the disk: a page must never
+		// wait on someone else's server.
+		if c.IconDir != "" {
+			go func() {
+				if err := fetchIconsQuiet(c, false, true); err != nil {
+					fmt.Fprintln(os.Stderr, "icons:", err)
+				}
+			}()
 		}
 		fmt.Printf("newtab %s on http://%s\n", version(), c.Listen)
 		return srv.ListenAndServe()

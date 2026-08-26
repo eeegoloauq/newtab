@@ -61,6 +61,17 @@ default says nothing while the last day was perfect and shows the uptime
 figure once it was not. Latency is still available (`status.tail: latency`)
 for anyone who wants to watch it.
 
+## Proxying icons on demand
+
+The obvious alternative to fetching icons ahead of time: serve `/icon/x` by
+going to the site right then, and cache what comes back. It removes a step, and
+it costs the two things the step buys. The first paint would wait on however
+many sites have no cached icon yet — on a cold cache, all of them. And a start
+page that reaches out to forty sites the moment it opens tells each of them
+when its owner sat down at the computer, which is the leak the favicon service
+was rejected for. Fetching happens when a link is added; a running server does
+it in the background for links it has not seen before.
+
 ## A database
 
 There is no state to keep. The page is a function of the config file.
