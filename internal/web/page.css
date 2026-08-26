@@ -20,6 +20,9 @@
      The value is lookout's down red: the same state should be the same
      colour in both tools. */
   --down: #ff6d63;
+  /* The size of a link. Everything else is relative to it, so one number
+     in the config changes the whole page. */
+  --size: 17px;
 }
 
 * { box-sizing: border-box; }
@@ -30,7 +33,7 @@ body {
   max-width: 1160px;
   background: var(--bg);
   color: var(--ink);
-  font: 17px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font: var(--size)/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -40,7 +43,26 @@ body {
    The label says what the field does, so the placeholder does not have
    to teach — and an empty field stays empty rather than holding a
    sentence you have already read a thousand times. */
-.find { margin: 0 0 40px; }
+/* The field and the weather share a line: the weather is the only thing
+   on the page that is not a link, so it sits where it cannot be mistaken
+   for one. */
+.find {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 40px;
+}
+
+.wx {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--head);
+  font-size: calc(var(--size) - 2px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sky { width: 18px; height: 18px; }
 
 
 /* The label is for a screen reader only: on screen the placeholder and
@@ -64,7 +86,7 @@ h2 {
   display: block;
   margin: 0 0 6px;
   color: var(--head);
-  font-size: 15px;
+  font-size: calc(var(--size) - 2px);
   font-weight: 600;
 }
 
@@ -96,12 +118,12 @@ h2 {
 
 #q {
   min-width: 0;
+  font-size: var(--size);
   border: 0;
   padding: 0;
   background: none;
   color: var(--ink);
   font: inherit;
-  font-size: 17px;
   outline: none;
 }
 /* Focus is a slightly clearer edge, not a colour: the field is already

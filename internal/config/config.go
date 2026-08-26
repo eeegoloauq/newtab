@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -48,6 +49,12 @@ type Config struct {
 	// reads. Empty means the page shows no state at all: this is the one
 	// integration, and it is optional.
 	Status Status `yaml:"status"`
+	// Weather puts the current conditions of one place beside the field.
+	// It reads Open-Meteo, which needs no account and no key.
+	Weather Weather `yaml:"weather"`
+	// Theme is the handful of things worth letting someone change without
+	// touching the CSS. Anything more and the page stops being one page.
+	Theme Theme `yaml:"theme"`
 	// Text holds the few strings the page shows that are not a link name.
 	// There is no translation framework and there should not be one for
 	// four strings: the operator writes them in their own language, and
@@ -79,6 +86,45 @@ func (p Proxmox) PollEvery() time.Duration {
 		return d
 	}
 	return 30 * time.Second
+}
+
+// Weather is one place to report. Empty latitude and longitude mean the
+// page shows nothing, which is the default.
+type Weather struct {
+	Latitude   float64 `yaml:"latitude"`
+	Longitude  float64 `yaml:"longitude"`
+	Fahrenheit bool    `yaml:"fahrenheit"`
+	Every      string  `yaml:"every"`
+}
+
+// Enabled reports whether a place was actually given. Zero, zero is a
+// point in the Atlantic; nobody means it.
+func (w Weather) Enabled() bool { return w.Latitude != 0 || w.Longitude != 0 }
+
+// PollEvery is Every parsed, or 15m: weather that is a quarter of an
+// hour old is still weather.
+func (w Weather) PollEvery() time.Duration {
+	if d, err := time.ParseDuration(w.Every); err == nil && d > 0 {
+		return d
+	}
+	return 15 * time.Minute
+}
+
+// Theme overrides the page's colours and size. Every field is optional
+// and an empty one keeps the built-in value.
+type Theme struct {
+	Background string `yaml:"background"`
+	Ink        string `yaml:"ink"`
+	Muted      string `yaml:"muted"`
+	Down       string `yaml:"down"`
+	// FontSize is the size of a link in pixels; everything else is
+	// relative to it.
+	FontSize int `yaml:"font_size"`
+	// Image is a file on disk to put behind the page. The page was built
+	// without one on purpose — text on a photograph is harder to read —
+	// so it comes with a dimming layer that defaults to most of the way.
+	Image    string  `yaml:"image"`
+	ImageDim float64 `yaml:"image_dim"`
 }
 
 // Text is every user-visible string that does not come from the links.
@@ -162,6 +208,9 @@ type Link struct {
 	Alias []string `yaml:"alias"`
 }
 
+// A colour and nothing else: this string is interpolated into CSS.
+var hexColour = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
 const (
 	defaultColumns   = 4
 	defaultLang      = "en"
@@ -226,6 +275,9 @@ func (c *Config) applyDefaults() {
 	if c.Text.Down == "" {
 		c.Text.Down = defaultDown
 	}
+	if c.Theme.ImageDim == 0 {
+		c.Theme.ImageDim = 0.72
+	}
 	if c.Text.Guests == "" {
 		c.Text.Guests = defaultGuests
 	}
@@ -279,6 +331,42 @@ func (c *Config) validate() error {
 		if c.Status.Every != "" {
 			if _, err := time.ParseDuration(c.Status.Every); err != nil {
 				return fmt.Errorf("status.every %q is not a duration like 30s", c.Status.Every)
+			}
+		}
+	}
+	for name, value := range map[string]string{
+		"theme.background": c.Theme.Background,
+		"theme.ink":        c.Theme.Ink,
+		"theme.muted":      c.Theme.Muted,
+		"theme.down":       c.Theme.Down,
+	} {
+		// The value goes into a stylesheet. Anything but a hex colour
+		// would be an opening for whatever else fits in a CSS value.
+		if value != "" && !hexColour.MatchString(value) {
+			return fmt.Errorf("%s %q is not a hex colour like #141312", name, value)
+		}
+	}
+	if c.Theme.FontSize != 0 && (c.Theme.FontSize < 12 || c.Theme.FontSize > 28) {
+		return fmt.Errorf("theme.font_size is %d: expected 12 to 28", c.Theme.FontSize)
+	}
+	if c.Theme.ImageDim < 0 || c.Theme.ImageDim > 1 {
+		return fmt.Errorf("theme.image_dim is %v: expected 0 to 1", c.Theme.ImageDim)
+	}
+	if c.Theme.Image != "" {
+		if _, err := os.Stat(c.Theme.Image); err != nil {
+			return fmt.Errorf("theme.image %q: %w", c.Theme.Image, err)
+		}
+	}
+	if c.Weather.Enabled() {
+		if c.Weather.Latitude < -90 || c.Weather.Latitude > 90 {
+			return fmt.Errorf("weather.latitude %v is not a latitude", c.Weather.Latitude)
+		}
+		if c.Weather.Longitude < -180 || c.Weather.Longitude > 180 {
+			return fmt.Errorf("weather.longitude %v is not a longitude", c.Weather.Longitude)
+		}
+		if c.Weather.Every != "" {
+			if _, err := time.ParseDuration(c.Weather.Every); err != nil {
+				return fmt.Errorf("weather.every %q is not a duration like 15m", c.Weather.Every)
 			}
 		}
 	}

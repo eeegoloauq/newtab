@@ -37,7 +37,7 @@ func testPage(t *testing.T, iconDir string) *config.Config {
 // A cached copy of the start page would hide a link the operator just
 // added, and this is the first page of every browsing session.
 func TestIndexIsHTMLAndUncached(t *testing.T) {
-	rec := get(t, New(testPage(t, ""), nil, nil), "/")
+	rec := get(t, New(testPage(t, ""), nil, nil, nil), "/")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
@@ -75,7 +75,7 @@ func TestIconIsServedAsUntrustedBytes(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "git.png"), tinyPNG, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	rec := get(t, New(testPage(t, dir), nil, nil), "/icon/git")
+	rec := get(t, New(testPage(t, dir), nil, nil, nil), "/icon/git")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.Bytes())
 	}
@@ -117,7 +117,7 @@ func TestIconRejectsPathTraversal(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(iconDir, "git.png"), []byte("icon-bytes"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	h := New(testPage(t, iconDir), nil, nil)
+	h := New(testPage(t, iconDir), nil, nil, nil)
 	for _, path := range []string{
 		"/icon/..%2f..%2fetc%2fpasswd",
 		"/icon/../../etc/passwd",
@@ -149,7 +149,7 @@ func TestIconRejectsPathTraversal(t *testing.T) {
 // operator may not have run `newtab icons` yet, and the links still
 // have to be there.
 func TestEmptyIconDirStillRendersThePage(t *testing.T) {
-	h := New(testPage(t, ""), nil, nil)
+	h := New(testPage(t, ""), nil, nil, nil)
 	icon := get(t, h, "/icon/git")
 	if icon.Code != http.StatusNotFound {
 		t.Errorf("/icon/git: status %d, want 404", icon.Code)
@@ -164,7 +164,7 @@ func TestEmptyIconDirStillRendersThePage(t *testing.T) {
 }
 
 func TestHealthzOK(t *testing.T) {
-	rec := get(t, New(testPage(t, ""), nil, nil), "/healthz")
+	rec := get(t, New(testPage(t, ""), nil, nil, nil), "/healthz")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
@@ -175,14 +175,14 @@ func TestHealthzOK(t *testing.T) {
 
 // 204 is "no icon", which keeps the console quiet without shipping an asset.
 func TestFaviconIsSilent(t *testing.T) {
-	rec := get(t, New(testPage(t, ""), nil, nil), "/favicon.ico")
+	rec := get(t, New(testPage(t, ""), nil, nil, nil), "/favicon.ico")
 	if rec.Code != http.StatusNoContent {
 		t.Errorf("status %d, want 204", rec.Code)
 	}
 }
 
 func TestUnknownPathIs404(t *testing.T) {
-	rec := get(t, New(testPage(t, ""), nil, nil), "/nope")
+	rec := get(t, New(testPage(t, ""), nil, nil, nil), "/nope")
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status %d", rec.Code)
 	}

@@ -36,6 +36,56 @@ sections:
 `style: list` is bookmarks. `style: live` is for things that can be down — those
 rows can show state, see below. Full example: [config.example.yaml](config.example.yaml).
 
+## Looks
+
+The colours, the size and a background are config, not a fork. Everything else
+about the page stays the same, which is the point: it is an index, and an index
+has to stay readable.
+
+```yaml
+theme:
+  background: "#f6f3ec"
+  ink: "#22201c"
+  muted: "#6b6459"
+  down: "#b3261e"
+```
+
+![Light](docs/looks/light.png)
+
+```yaml
+theme:
+  image: /var/lib/newtab/dusk.png
+  image_dim: 0.55      # how much of it is shaded, so the text stays text
+```
+
+![With a background](docs/looks/photo.png)
+
+```yaml
+columns: 3
+theme:
+  font_size: 21
+```
+
+![Larger type](docs/looks/big.png)
+
+`newtab demo -config yours.yaml` renders your own config against invented state,
+which is how these were taken and the only way to see a down row without
+waiting for something to break.
+
+## Weather
+
+```yaml
+weather:
+  latitude: 59.9386
+  longitude: 30.3141
+  every: 15m
+```
+
+Temperature and a glyph beside the field, from
+[Open-Meteo](https://open-meteo.com/) — no account, no key. The condition is a
+drawing rather than a word, so the page still ships no language. The poll is on
+its own clock like the others.
+
 ## Making it your start page
 
 **Chrome, Edge, desktop.** Settings → On startup → Open a specific page, and

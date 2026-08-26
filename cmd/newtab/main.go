@@ -17,6 +17,7 @@ import (
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
+	"github.com/eeegoloauq/newtab/internal/weather"
 	"github.com/eeegoloauq/newtab/internal/web"
 )
 
@@ -71,7 +72,9 @@ const usage = `newtab — start page
   newtab icons [-force] <config.yaml>   fetch each site's own icon into icon_dir
   newtab extension <config.yaml> <dir>  write a browser extension that makes
                                         this page the new tab
-  newtab demo [-write out.html]         the page on made-up state, for a look
+  newtab demo [-config c.yaml] [-write out.html]
+                                        the page on made-up state, for a look
+                                        or for previewing a config of your own
   newtab version
 `
 
@@ -189,14 +192,23 @@ var demoConfig []byte
 // screenshot and a first look both show what a monitor and a hypervisor
 // add — without either of them existing.
 func demo(args []string) error {
-	dir, err := os.MkdirTemp("", "newtab-demo")
-	if err != nil {
-		return err
+	// -config previews a config of your own against the same invented
+	// state, which is the only way to see a down row without waiting for
+	// something to break.
+	path := ""
+	if len(args) >= 2 && args[0] == "-config" {
+		path, args = args[1], args[2:]
 	}
-	defer os.RemoveAll(dir)
-	path := filepath.Join(dir, "demo.yaml")
-	if err := os.WriteFile(path, demoConfig, 0o600); err != nil {
-		return err
+	if path == "" {
+		dir, err := os.MkdirTemp("", "newtab-demo")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(dir)
+		path = filepath.Join(dir, "demo.yaml")
+		if err := os.WriteFile(path, demoConfig, 0o600); err != nil {
+			return err
+		}
 	}
 	c, err := config.Load(path)
 	if err != nil {
@@ -212,21 +224,27 @@ func demo(args []string) error {
 		"Git":    {Name: "Git", Down: 20 * time.Minute, Uptime24h: 0.986},
 	})
 	pve := proxmox.Stats{Running: 16, CPU: 29, Memory: 51, OK: true}
-	writing := len(args) == 2 && args[0] == "-write"
-	// A written demo is opened from disk, where /icon/... leads nowhere.
-	body, err := web.Demo(c, snap, pve, writing)
-	if err != nil {
-		return err
-	}
-	if writing {
+	wx := weather.Now{Temperature: 12, Sky: weather.Rain, OK: true}
+	if len(args) == 2 && args[0] == "-write" {
+		// A file is opened from disk, where /icon/... leads nowhere, so
+		// the icons go inside it.
+		body, err := web.Demo(c, snap, pve, wx, true)
+		if err != nil {
+			return err
+		}
 		return os.WriteFile(args[1], body, 0o644)
 	}
-	http.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(body)
-	})
+	// Served, this is the ordinary server with invented readings behind
+	// it: same icons, same background, same everything but the numbers.
+	srv := &http.Server{
+		Addr: c.Listen,
+		Handler: web.New(c,
+			func() status.Snapshot { return snap },
+			func() proxmox.Stats { return pve },
+			func() weather.Now { return wx }),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	fmt.Printf("newtab demo on http://%s\n", c.Listen)
-	srv := &http.Server{Addr: c.Listen, ReadHeaderTimeout: 5 * time.Second}
 	return srv.ListenAndServe()
 }
 
@@ -319,6 +337,17 @@ func run(args []string) error {
 			go p.Run(ctxFor(&cancels))
 			snapshot = p.Snapshot
 		}
+		var sky func() weather.Now
+		if c.Weather.Enabled() {
+			p := &weather.Poller{
+				Latitude:   c.Weather.Latitude,
+				Longitude:  c.Weather.Longitude,
+				Fahrenheit: c.Weather.Fahrenheit,
+				Every:      c.Weather.PollEvery(),
+			}
+			go p.Run(ctxFor(&cancels))
+			sky = p.Now
+		}
 		var stats func() proxmox.Stats
 		if c.Proxmox.URL != "" {
 			p := &proxmox.Poller{
@@ -332,7 +361,7 @@ func run(args []string) error {
 		}
 		srv := &http.Server{
 			Addr:              c.Listen,
-			Handler:           web.New(c, snapshot, stats),
+			Handler:           web.New(c, snapshot, stats, sky),
 			ReadHeaderTimeout: 5 * time.Second,
 		}
 		// Icons for links added since the last run are fetched in the

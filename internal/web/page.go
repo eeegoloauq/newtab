@@ -18,6 +18,7 @@ import (
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
+	"github.com/eeegoloauq/newtab/internal/weather"
 )
 
 //go:embed page.html
@@ -32,6 +33,12 @@ var pageJS string
 var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
 type pageView struct {
+	// Weather is the temperature and the glyph beside the field, or empty
+	// when no place is configured or nothing has been read yet.
+	Weather *weatherView
+	// Theme is the CSS custom properties the config overrides, already
+	// checked to be colours and sizes.
+	Theme template.CSS
 	// Standalone drops the links a served page has and a file cannot use:
 	// a manifest and an icon fetched by path mean nothing inside an
 	// extension or a saved file.
@@ -52,6 +59,14 @@ type pageView struct {
 // columnView is one column of the page. Dealing the sections into
 // columns here, rather than letting CSS do it, is what keeps a section
 // from jumping to another column when the filter hides a row.
+// weatherView is what the page draws for the weather: a number and the
+// name of a glyph. No word, so no language.
+type weatherView struct {
+	Temperature string
+	Sky         string
+	Night       bool
+}
+
 type columnView struct {
 	Sections []sectionView
 }
@@ -101,8 +116,8 @@ type linkView struct {
 // render builds the whole document. Every section is a list and they all
 // flow through the same columns, in config order: the operator's order is
 // the reading order.
-func render(c *config.Config, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
-	return build(c, false, snap, pve)
+func render(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.Now) ([]byte, error) {
+	return buildWith(c, false, snap, pve, wx, "")
 }
 
 // Script is the page's JavaScript, for the one caller that has to ship it
@@ -119,14 +134,14 @@ func buildInline(c *config.Config) ([]byte, error) {
 // buildExtension is the single-file page with its script pulled out, for
 // a browser extension: extension pages refuse inline scripts.
 func buildExtension(c *config.Config, script string) ([]byte, error) {
-	return buildWith(c, true, status.Snapshot{}, proxmox.Stats{}, script)
+	return buildWith(c, true, status.Snapshot{}, proxmox.Stats{}, weather.Now{}, script)
 }
 
 func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
-	return buildWith(c, inline, snap, pve, "")
+	return buildWith(c, inline, snap, pve, weather.Now{}, "")
 }
 
-func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats, script string) ([]byte, error) {
+func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, script string) ([]byte, error) {
 	v := pageView{
 		Standalone: inline,
 		ScriptSrc:  script,
@@ -136,6 +151,16 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Engine:     c.Search.Engine,
 		CSS:        template.CSS(pageCSS),
 		JS:         template.JS(pageJS),
+		Theme:      template.CSS(themeCSS(c.Theme)),
+	}
+	// A page built as a file has no server behind it to have polled
+	// anything, so it carries no weather.
+	if wx.OK && !inline {
+		v.Weather = &weatherView{
+			Temperature: strconv.Itoa(wx.Temperature) + "\u00b0",
+			Sky:         string(wx.Sky),
+			Night:       wx.Night,
+		}
 	}
 	store := icons.Store{Dir: c.IconDir}
 	var flat []sectionView
@@ -245,6 +270,38 @@ func compact(d time.Duration) string {
 		return strconv.Itoa(int(d.Hours())) + "h"
 	}
 	return strconv.Itoa(int(d.Hours()/24)) + "d"
+}
+
+// themeCSS turns the config's overrides into custom properties. Every
+// value here was checked by the config: colours are hex, sizes are in
+// range, and nothing else reaches this string.
+func themeCSS(t config.Theme) string {
+	var b strings.Builder
+	b.WriteString(":root{")
+	for prop, value := range map[string]string{
+		"--bg":   t.Background,
+		"--ink":  t.Ink,
+		"--head": t.Muted,
+		"--down": t.Down,
+	} {
+		if value != "" {
+			fmt.Fprintf(&b, "%s:%s;", prop, value)
+		}
+	}
+	if t.FontSize != 0 {
+		fmt.Fprintf(&b, "--size:%dpx;", t.FontSize)
+	}
+	if t.Image != "" {
+		fmt.Fprintf(&b, "--shade:rgba(0,0,0,%.2f);", t.ImageDim)
+	}
+	b.WriteString("}")
+	if t.Image != "" {
+		// The photograph goes behind a shade, because the page is text
+		// and text on a photograph is the oldest way to make it
+		// unreadable.
+		b.WriteString("body{background:var(--shade) url(/background) center/cover fixed;background-blend-mode:darken;}")
+	}
+	return b.String()
 }
 
 // deal spreads sections over n columns in config order, keeping the

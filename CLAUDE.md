@@ -11,6 +11,7 @@ cmd/newtab      CLI: run, validate, render, icons, version
 internal/config YAML -> sections, and every validation error the operator gets
 internal/icons  fetching a site's own favicon, and the store it lands in
 internal/status  read-only client for a lookout monitor, polled on its own clock
+internal/weather read-only client for Open-Meteo, polled on its own clock
 internal/proxmox read-only client for a hypervisor's three numbers
 internal/web    the page: template, CSS, JS, and the HTTP handlers
 ```
@@ -55,6 +56,14 @@ this is a reader.
 
 The columns are dealt on the server. CSS multicol was tried and it rebalanced
 on every keystroke, throwing sections sideways while the filter ran.
+
+Anything the page reads from elsewhere is polled on its own clock by a package
+of its own, and handed to the renderer as a value. There is no fetching inside
+a render and no shared mutable state between them.
+
+The theme is four colours and two numbers, and every one of them is validated
+before it reaches the stylesheet. Do not widen it into a styling language: the
+page is an index and it has to stay readable.
 
 The page ships no natural language. Strings that are not a link name live in
 `text:` in the config, with English defaults in `applyDefaults` — add the

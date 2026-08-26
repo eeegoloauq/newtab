@@ -8,6 +8,7 @@ import (
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
+	"github.com/eeegoloauq/newtab/internal/weather"
 )
 
 func testConfig() *config.Config {
@@ -26,7 +27,7 @@ func testConfig() *config.Config {
 }
 
 func TestRenderSplitsStyles(t *testing.T) {
-	body, err := render(testConfig(), status.Snapshot{}, proxmox.Stats{})
+	body, err := render(testConfig(), status.Snapshot{}, proxmox.Stats{}, weather.Now{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +140,7 @@ func TestHypervisorNumbersAreTerseWithASpelledOutHint(t *testing.T) {
 func TestRenderEscapes(t *testing.T) {
 	c := testConfig()
 	c.Sections[1].Links[0].Name = `<script>alert(1)</script>`
-	body, err := render(c, status.Snapshot{}, proxmox.Stats{})
+	body, err := render(c, status.Snapshot{}, proxmox.Stats{}, weather.Now{})
 	if err != nil {
 		t.Fatal(err)
 	}

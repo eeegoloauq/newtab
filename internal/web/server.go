@@ -10,12 +10,13 @@ import (
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
 	"github.com/eeegoloauq/newtab/internal/status"
+	"github.com/eeegoloauq/newtab/internal/weather"
 )
 
 // New returns the handler for every endpoint newtab serves. The snapshot
 // function is called on each render and must not block; it is nil when
 // no monitor is configured.
-func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox.Stats) http.Handler {
+func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox.Stats, sky func() weather.Now) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		snap := status.Snapshot{}
@@ -26,7 +27,11 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 		if stats != nil {
 			pve = stats()
 		}
-		body, err := render(c, snap, pve)
+		wx := weather.Now{}
+		if sky != nil {
+			wx = sky()
+		}
+		body, err := render(c, snap, pve, wx)
 		if err != nil {
 			http.Error(w, "render failed", http.StatusInternalServerError)
 			return
@@ -45,6 +50,15 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 	mux.HandleFunc("GET /icon/{slug}", iconHandler(c.IconDir))
 	// A phone that is told to add this to the home screen needs a name,
 	// a colour and an icon, or it invents all three from a screenshot.
+	if c.Theme.Image != "" {
+		path := c.Theme.Image
+		mux.HandleFunc("GET /background", func(w http.ResponseWriter, r *http.Request) {
+			// One file from the config, not a directory: there is no path
+			// to traverse.
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			http.ServeFile(w, r, path)
+		})
+	}
 	mux.HandleFunc("GET /manifest.webmanifest", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/manifest+json")
 		w.Write(manifest(c))
@@ -127,8 +141,8 @@ func iconHandler(dir string) http.HandlerFunc {
 // can see what the monitor adds before wiring one up.
 // With inline set the icons are embedded, so the file stands on its own
 // wherever it is opened.
-func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, inline bool) ([]byte, error) {
-	return build(c, inline, snap, pve)
+func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, inline bool) ([]byte, error) {
+	return buildWith(c, inline, snap, pve, wx, "")
 }
 
 // Extension renders the page for a browser extension: icons embedded and
@@ -147,5 +161,5 @@ func Render(c *config.Config, inline bool) ([]byte, error) {
 		return buildInline(c)
 	}
 	// A file has no live monitor behind it, so it shows no state.
-	return render(c, status.Snapshot{}, proxmox.Stats{})
+	return render(c, status.Snapshot{}, proxmox.Stats{}, weather.Now{})
 }

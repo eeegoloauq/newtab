@@ -91,6 +91,25 @@ sections:
       - {name: Steam, url: "https://store.steampowered.com/"}
       - {name: Duolingo, url: "https://www.duolingo.com/"}
 
+# Optional. Temperature and a glyph beside the field, from Open-Meteo:
+# no account and no key. Delete the block to have none.
+weather:
+  latitude: 59.9386
+  longitude: 30.3141
+  every: 15m
+
+# Optional. The page is built to be read, and the defaults are the ones
+# it was designed with; these are here for the cases where they are wrong
+# — a bright room, a big screen, a photograph you like.
+theme:
+  # background: "#141312"
+  # ink: "#e8e4da"
+  # muted: "#8a8478"
+  # down: "#ff6d63"
+  # font_size: 17
+  # image: /var/lib/newtab/dusk.png
+  # image_dim: 0.55
+
 # Optional. What an uptime monitor knows, read-only. Rows match checks by
 # the host they point at, or by `check:` on the link.
 status:
