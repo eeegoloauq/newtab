@@ -174,10 +174,25 @@ func TestHealthzOK(t *testing.T) {
 }
 
 // 204 is "no icon", which keeps the console quiet without shipping an asset.
-func TestFaviconIsSilent(t *testing.T) {
-	rec := get(t, New(testPage(t, ""), nil, nil, nil, nil), "/favicon.ico")
-	if rec.Code != http.StatusNoContent {
-		t.Errorf("status %d, want 204", rec.Code)
+// Both names are served: a browser that reads the <link> takes the SVG,
+// one that asks by convention gets a PNG rather than nothing.
+func TestFaviconIsServedUnderBothNames(t *testing.T) {
+	h := New(testPage(t, ""), nil, nil, nil, nil)
+
+	svg := get(t, h, "/favicon.svg")
+	if svg.Code != http.StatusOK || svg.Header().Get("Content-Type") != "image/svg+xml" {
+		t.Errorf("favicon.svg: %d %q", svg.Code, svg.Header().Get("Content-Type"))
+	}
+	if !bytes.Contains(svg.Body.Bytes(), []byte("<svg")) {
+		t.Error("favicon.svg is not an SVG")
+	}
+
+	ico := get(t, h, "/favicon.ico")
+	if ico.Code != http.StatusOK || ico.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("favicon.ico: %d %q", ico.Code, ico.Header().Get("Content-Type"))
+	}
+	if !bytes.HasPrefix(ico.Body.Bytes(), []byte{0x89, 'P', 'N', 'G'}) {
+		t.Error("favicon.ico is not a PNG")
 	}
 }
 
