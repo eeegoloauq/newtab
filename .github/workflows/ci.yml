@@ -30,7 +30,8 @@ jobs:
       - run: go test -race ./...
       - run: CGO_ENABLED=0 go build ./cmd/newtab
       # The example config is the only documentation of the format, so it
-      # has to keep loading.
+      # has to keep loading — and it has to load with nothing set up, the
+      # way a stranger will load it.
       - name: validate the example config
         run: go run ./cmd/newtab validate config.example.yaml
       # A page that fails to render is not something to find out about in

@@ -120,10 +120,12 @@ status:
   tail: problems
 
 # Optional. Three numbers from a hypervisor, on the row of the link that
-# is it. The token is read from the environment, never from this file.
-proxmox:
-  url: https://198.51.100.10:8006
-  token_env: NEWTAB_PROXMOX_TOKEN
-  attach: Hypervisor
-  every: 30s
-  insecure: true
+# is it. Commented out because it needs a token: newtab validate refuses
+# a config whose token variable is empty, and an example anyone can load
+# is worth more than an example with everything switched on.
+# proxmox:
+#   url: https://198.51.100.10:8006
+#   token_env: NEWTAB_PROXMOX_TOKEN   # user@realm!id=secret, from the environment
+#   attach: Hypervisor
+#   every: 30s
+#   insecure: true
