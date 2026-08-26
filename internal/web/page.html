@@ -27,6 +27,7 @@
            placeholder="{{.Text.Search}}">
     <p class="sr" id="said" aria-live="polite"></p>
   </span>
+  {{if .Rates}}<span class="rates">{{.Rates}}</span>{{end}}
   {{with .Weather}}<span class="wx"><svg class="sky" viewBox="0 0 24 24" aria-hidden="true"><use href="#sky-{{.Sky}}"/></svg>{{.Temperature}}</span>{{end}}
 </form>
 

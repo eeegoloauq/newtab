@@ -16,6 +16,7 @@ import (
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
+	"github.com/eeegoloauq/newtab/internal/rates"
 	"github.com/eeegoloauq/newtab/internal/status"
 	"github.com/eeegoloauq/newtab/internal/weather"
 	"github.com/eeegoloauq/newtab/internal/web"
@@ -225,10 +226,13 @@ func demo(args []string) error {
 	})
 	pve := proxmox.Stats{Running: 16, CPU: 29, Memory: 51, OK: true}
 	wx := weather.Now{Temperature: 12, Sky: weather.Rain, OK: true}
+	quotes := rates.Table{Base: "USD", Quotes: []rates.Quote{
+		{Symbol: "EUR", Price: 0.857}, {Symbol: "BTC", Price: 78039},
+	}}
 	if len(args) == 2 && args[0] == "-write" {
 		// A file is opened from disk, where /icon/... leads nowhere, so
 		// the icons go inside it.
-		body, err := web.Demo(c, snap, pve, wx, true)
+		body, err := web.Demo(c, snap, pve, wx, quotes, true)
 		if err != nil {
 			return err
 		}
@@ -241,7 +245,8 @@ func demo(args []string) error {
 		Handler: web.New(c,
 			func() status.Snapshot { return snap },
 			func() proxmox.Stats { return pve },
-			func() weather.Now { return wx }),
+			func() weather.Now { return wx },
+			func() rates.Table { return quotes }),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	fmt.Printf("newtab demo on http://%s\n", c.Listen)
@@ -337,6 +342,17 @@ func run(args []string) error {
 			go p.Run(ctxFor(&cancels))
 			snapshot = p.Snapshot
 		}
+		var quotes func() rates.Table
+		if c.Rates.Enabled() {
+			p := &rates.Poller{
+				Base:   c.Rates.Base,
+				Fiat:   c.Rates.Fiat,
+				Crypto: c.Rates.Crypto,
+				Every:  c.Rates.PollEvery(),
+			}
+			go p.Run(ctxFor(&cancels))
+			quotes = p.Table
+		}
 		var sky func() weather.Now
 		if c.Weather.Enabled() {
 			p := &weather.Poller{
@@ -361,7 +377,7 @@ func run(args []string) error {
 		}
 		srv := &http.Server{
 			Addr:              c.Listen,
-			Handler:           web.New(c, snapshot, stats, sky),
+			Handler:           web.New(c, snapshot, stats, sky, quotes),
 			ReadHeaderTimeout: 5 * time.Second,
 		}
 		// Icons for links added since the last run are fetched in the

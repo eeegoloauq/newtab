@@ -71,6 +71,15 @@ body {
 }
 .sky { width: 18px; height: 18px; }
 
+/* The same quiet ink as the weather: these are things to glance at, not
+   things to read. */
+.rates {
+  color: var(--head);
+  font-size: calc(var(--size) - 2px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 
 /* The label is for a screen reader only: on screen the placeholder and
    the note below say the same thing, and a caption over an invisible

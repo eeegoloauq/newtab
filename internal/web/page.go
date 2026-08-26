@@ -18,6 +18,7 @@ import (
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
+	"github.com/eeegoloauq/newtab/internal/rates"
 	"github.com/eeegoloauq/newtab/internal/status"
 	"github.com/eeegoloauq/newtab/internal/weather"
 )
@@ -34,6 +35,8 @@ var pageJS string
 var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
 type pageView struct {
+	// Rates is the line of quotes, or empty.
+	Rates string
 	// Weather is the temperature and the glyph beside the field, or empty
 	// when no place is configured or nothing has been read yet.
 	Weather *weatherView
@@ -111,6 +114,8 @@ type linkView struct {
 	// stays because it is the one place on the page where a value goes,
 	// and it is the same slot on every row so the columns stay straight.
 	Tail string
+	// Pin lifts this row to the top of its section.
+	Pin bool
 	// Key is what the filter matches against: the name, the host and any
 	// aliases, lowercased and joined. Matching happens in the browser
 	// against this one string so the filter never touches the network.
@@ -120,8 +125,8 @@ type linkView struct {
 // render builds the whole document. Every section is a list and they all
 // flow through the same columns, in config order: the operator's order is
 // the reading order.
-func render(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.Now) ([]byte, error) {
-	return buildWith(c, false, snap, pve, wx, "")
+func render(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, quotes rates.Table) ([]byte, error) {
+	return buildWith(c, false, snap, pve, wx, quotes, "")
 }
 
 // Script is the page's JavaScript, for the one caller that has to ship it
@@ -138,14 +143,14 @@ func buildInline(c *config.Config) ([]byte, error) {
 // buildExtension is the single-file page with its script pulled out, for
 // a browser extension: extension pages refuse inline scripts.
 func buildExtension(c *config.Config, script string) ([]byte, error) {
-	return buildWith(c, true, status.Snapshot{}, proxmox.Stats{}, weather.Now{}, script)
+	return buildWith(c, true, status.Snapshot{}, proxmox.Stats{}, weather.Now{}, rates.Table{}, script)
 }
 
 func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
-	return buildWith(c, inline, snap, pve, weather.Now{}, "")
+	return buildWith(c, inline, snap, pve, weather.Now{}, rates.Table{}, "")
 }
 
-func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, script string) ([]byte, error) {
+func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, quotes rates.Table, script string) ([]byte, error) {
 	v := pageView{
 		Standalone: inline,
 		ScriptSrc:  script,
@@ -160,6 +165,9 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 	}
 	// A page built as a file has no server behind it to have polled
 	// anything, so it carries no weather.
+	if !inline {
+		v.Rates = quotes.Line()
+	}
 	if wx.OK && !inline {
 		v.Weather = &weatherView{
 			Temperature: strconv.Itoa(wx.Temperature) + "\u00b0",
@@ -173,6 +181,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		sv := sectionView{Name: s.Name}
 		for _, l := range s.Links {
 			lv := linkView{
+				Pin:  l.Pin,
 				Name: l.Name,
 				URL:  l.URL,
 				Host: hostOf(l.URL),
@@ -200,6 +209,9 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 			}
 			sv.Links = append(sv.Links, lv)
 		}
+		// Pinned links come first, and the rest keep the order they were
+		// written in.
+		sort.SliceStable(sv.Links, func(i, j int) bool { return sv.Links[i].Pin && !sv.Links[j].Pin })
 		sv.Live = s.Style == config.StyleLive
 		flat = append(flat, sv)
 	}

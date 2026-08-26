@@ -30,6 +30,7 @@ sections:
       - name: Hacker News
         url: https://news.ycombinator.com/
         alias: [hn]          # also matches when you type this
+        pin: true            # first in its section
 ```
 
 ```yaml
@@ -78,6 +79,21 @@ theme:
 
 `newtab demo -config yours.yaml` renders your config against invented state —
 how these were taken, and how to see a down row without waiting for one.
+
+## Rates
+
+```yaml
+rates:
+  base: USD
+  fiat: [EUR, GBP]     # one USD in each
+  crypto: [BTC, ETH]   # priced in USD
+  every: 30m
+```
+
+`EUR 0.86 · BTC 78k` beside the field. Currencies from
+[open.er-api.com](https://open.er-api.com/), crypto from Coinbase's public spot
+price. Neither needs an account. TradingView has no free API — only an embedded
+widget, which would mean somebody else's script on your page.
 
 ## Weather
 

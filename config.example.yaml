@@ -91,6 +91,15 @@ sections:
       - {name: Steam, url: "https://store.steampowered.com/"}
       - {name: Duolingo, url: "https://www.duolingo.com/"}
 
+# Optional. A line of quotes beside the field. Currencies come from
+# open.er-api.com and crypto from Coinbase's public price; neither needs
+# an account. Delete the block to have none.
+rates:
+  base: USD
+  fiat: [EUR, GBP]
+  crypto: [BTC, ETH]
+  every: 30m
+
 # Optional. Temperature and a glyph beside the field, from Open-Meteo:
 # no account and no key. Delete the block to have none.
 weather:

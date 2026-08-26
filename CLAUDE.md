@@ -12,6 +12,7 @@ internal/config YAML -> sections, and every validation error the operator gets
 internal/icons  fetching a site's own favicon, and the store it lands in
 internal/status  read-only client for a lookout monitor, polled on its own clock
 internal/weather read-only client for Open-Meteo, polled on its own clock
+internal/rates   read-only client for currency and crypto prices, same shape
 internal/proxmox read-only client for a hypervisor's three numbers
 internal/web    the page: template, CSS, JS, and the HTTP handlers
 ```

@@ -9,6 +9,7 @@ import (
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
+	"github.com/eeegoloauq/newtab/internal/rates"
 	"github.com/eeegoloauq/newtab/internal/status"
 	"github.com/eeegoloauq/newtab/internal/weather"
 )
@@ -16,7 +17,7 @@ import (
 // New returns the handler for every endpoint newtab serves. The snapshot
 // function is called on each render and must not block; it is nil when
 // no monitor is configured.
-func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox.Stats, sky func() weather.Now) http.Handler {
+func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox.Stats, sky func() weather.Now, quotes func() rates.Table) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		snap := status.Snapshot{}
@@ -31,7 +32,11 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 		if sky != nil {
 			wx = sky()
 		}
-		body, err := render(c, snap, pve, wx)
+		table := rates.Table{}
+		if quotes != nil {
+			table = quotes()
+		}
+		body, err := render(c, snap, pve, wx, table)
 		if err != nil {
 			http.Error(w, "render failed", http.StatusInternalServerError)
 			return
@@ -141,8 +146,8 @@ func iconHandler(dir string) http.HandlerFunc {
 // can see what the monitor adds before wiring one up.
 // With inline set the icons are embedded, so the file stands on its own
 // wherever it is opened.
-func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, inline bool) ([]byte, error) {
-	return buildWith(c, inline, snap, pve, wx, "")
+func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.Now, quotes rates.Table, inline bool) ([]byte, error) {
+	return buildWith(c, inline, snap, pve, wx, quotes, "")
 }
 
 // Extension renders the page for a browser extension: icons embedded and
@@ -161,5 +166,5 @@ func Render(c *config.Config, inline bool) ([]byte, error) {
 		return buildInline(c)
 	}
 	// A file has no live monitor behind it, so it shows no state.
-	return render(c, status.Snapshot{}, proxmox.Stats{}, weather.Now{})
+	return render(c, status.Snapshot{}, proxmox.Stats{}, weather.Now{}, rates.Table{})
 }

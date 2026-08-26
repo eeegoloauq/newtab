@@ -49,6 +49,9 @@ type Config struct {
 	// reads. Empty means the page shows no state at all: this is the one
 	// integration, and it is optional.
 	Status Status `yaml:"status"`
+	// Rates puts a line of exchange rates and crypto prices beside the
+	// field. Both sources are open without an account.
+	Rates Rates `yaml:"rates"`
 	// Weather puts the current conditions of one place beside the field.
 	// It reads Open-Meteo, which needs no account and no key.
 	Weather Weather `yaml:"weather"`
@@ -86,6 +89,30 @@ func (p Proxmox) PollEvery() time.Duration {
 		return d
 	}
 	return 30 * time.Second
+}
+
+// Rates is what to quote and in what. Empty lists mean nothing is
+// shown, which is the default.
+type Rates struct {
+	// Base is the currency everything is priced in; USD if unset.
+	Base string `yaml:"base"`
+	// Fiat are currency codes: one Base costs this much of each.
+	Fiat []string `yaml:"fiat"`
+	// Crypto are asset codes priced in Base.
+	Crypto []string `yaml:"crypto"`
+	Every  string   `yaml:"every"`
+}
+
+// Enabled reports whether anything was asked for.
+func (r Rates) Enabled() bool { return len(r.Fiat) > 0 || len(r.Crypto) > 0 }
+
+// PollEvery is Every parsed, or 30m. Currency rates are published once a
+// day; crypto moves faster than anyone should watch from a start page.
+func (r Rates) PollEvery() time.Duration {
+	if d, err := time.ParseDuration(r.Every); err == nil && d > 0 {
+		return d
+	}
+	return 30 * time.Minute
 }
 
 // Weather is one place to report. Empty latitude and longitude mean the
@@ -205,6 +232,10 @@ type Link struct {
 	// Check names a lookout check when the automatic match by host is
 	// wrong or ambiguous. Empty means "match by host, or no dot at all".
 	Check string `yaml:"check"`
+	// Pin puts a link first in its section, ahead of the config order.
+	// It is the static answer to "put what I use most on top": no
+	// history, no counting, and the row never moves on its own.
+	Pin bool `yaml:"pin"`
 	// Alias adds words the filter should match besides the name, for the
 	// links whose name is not what you type ("mail" for Gmail), including
 	// the operator's own language.
@@ -358,6 +389,18 @@ func (c *Config) validate() error {
 	if c.Theme.Image != "" {
 		if _, err := os.Stat(c.Theme.Image); err != nil {
 			return fmt.Errorf("theme.image %q: %w", c.Theme.Image, err)
+		}
+	}
+	if c.Rates.Enabled() {
+		for _, code := range append(append([]string{}, c.Rates.Fiat...), c.Rates.Crypto...) {
+			if len(code) < 2 || len(code) > 8 || strings.ContainsAny(code, " /\\?&") {
+				return fmt.Errorf("rates: %q is not a currency or asset code", code)
+			}
+		}
+		if c.Rates.Every != "" {
+			if _, err := time.ParseDuration(c.Rates.Every); err != nil {
+				return fmt.Errorf("rates.every %q is not a duration like 30m", c.Rates.Every)
+			}
 		}
 	}
 	if c.Weather.Enabled() {
