@@ -6,13 +6,20 @@ import (
 
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
+	"github.com/eeegoloauq/newtab/internal/status"
 )
 
-// New returns the handler for every endpoint newtab serves.
-func New(c *config.Config) http.Handler {
+// New returns the handler for every endpoint newtab serves. The snapshot
+// function is called on each render and must not block; it is nil when
+// no monitor is configured.
+func New(c *config.Config, snapshot func() status.Snapshot) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		body, err := render(c)
+		snap := status.Snapshot{}
+		if snapshot != nil {
+			snap = snapshot()
+		}
+		body, err := render(c, snap)
 		if err != nil {
 			http.Error(w, "render failed", http.StatusInternalServerError)
 			return
@@ -82,5 +89,6 @@ func Render(c *config.Config, inline bool) ([]byte, error) {
 	if inline {
 		return buildInline(c)
 	}
-	return render(c)
+	// A file has no live monitor behind it, so it shows no state.
+	return render(c, status.Snapshot{})
 }

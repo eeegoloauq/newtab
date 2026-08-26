@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 )
@@ -41,6 +42,10 @@ type Config struct {
 	// its pronunciation on, so it belongs to the config that names the
 	// links, not to the code.
 	Lang string `yaml:"lang"`
+	// Status points at a lookout instance whose /api/status this page
+	// reads. Empty means the page shows no state at all: this is the one
+	// integration, and it is optional.
+	Status Status `yaml:"status"`
 	// Text holds the few strings the page shows that are not a link name.
 	// There is no translation framework and there should not be one for
 	// four strings: the operator writes them in their own language, and
@@ -56,11 +61,30 @@ type Config struct {
 type Text struct {
 	// Search labels the input and is its placeholder.
 	Search string `yaml:"search"`
+	// Down is the word a row shows while its check is failing, before
+	// how long it has been failing.
+	Down string `yaml:"down"`
 	// Opens and WebSearch are announced to a screen reader as the filter
 	// narrows: what Enter would open, or that it would go to the engine.
 	// A sighted reader sees the same thing as an underline.
 	Opens     string `yaml:"opens"`
 	WebSearch string `yaml:"web_search"`
+}
+
+// Status is the monitor to read. Nothing is ever written back to it.
+type Status struct {
+	URL string `yaml:"url"`
+	// Every is a duration like "30s". The page never waits on the
+	// monitor, so this only decides how stale the numbers can be.
+	Every string `yaml:"every"`
+}
+
+// PollEvery is Every parsed, or 30s.
+func (s Status) PollEvery() time.Duration {
+	if d, err := time.ParseDuration(s.Every); err == nil && d > 0 {
+		return d
+	}
+	return 30 * time.Second
 }
 
 type Search struct {
@@ -94,6 +118,7 @@ const (
 	defaultSearch    = "Search"
 	defaultOpens     = "Opens"
 	defaultWebSearch = "Search the web"
+	defaultDown      = "down"
 	defaultTitle     = "newtab"
 	defaultListen    = "127.0.0.1:5669"
 	defaultEngine    = "https://www.google.com/search?q=%s"
@@ -145,6 +170,9 @@ func (c *Config) applyDefaults() {
 	if c.Text.WebSearch == "" {
 		c.Text.WebSearch = defaultWebSearch
 	}
+	if c.Text.Down == "" {
+		c.Text.Down = defaultDown
+	}
 	for i := range c.Sections {
 		if c.Sections[i].Style == "" {
 			c.Sections[i].Style = StyleList
@@ -160,6 +188,17 @@ func (c *Config) validate() error {
 	// in the config would be script running on the page.
 	if u, err := url.Parse(c.Search.Engine); err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 		return fmt.Errorf("search.engine %q is not an http(s) URL", c.Search.Engine)
+	}
+	if c.Status.URL != "" {
+		u, err := url.Parse(c.Status.URL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("status.url %q is not an http(s) URL", c.Status.URL)
+		}
+		if c.Status.Every != "" {
+			if _, err := time.ParseDuration(c.Status.Every); err != nil {
+				return fmt.Errorf("status.every %q is not a duration like 30s", c.Status.Every)
+			}
+		}
 	}
 	// A typo here is a service that will not start; catching it in
 	// validate is the whole point of the command.

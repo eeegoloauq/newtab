@@ -8,10 +8,13 @@ import (
 	_ "embed"
 	"html/template"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
+	"github.com/eeegoloauq/newtab/internal/status"
 )
 
 //go:embed page.html
@@ -63,6 +66,10 @@ type linkView struct {
 	// src otherwise. The value is ours: either a path we built from a
 	// slug, or a file we read from the icon directory.
 	Icon template.URL
+	// Down marks a row whose check is failing. The row says so twice: in
+	// this colour and in the tail, because colour alone is not something
+	// every reader can see.
+	Down bool
 	// Tail is what a live row carries after the name: how long it has
 	// been down, or a number about the thing itself. The host used to go
 	// here and was removed — a truncated photo.cdn.egor-solo… told the
@@ -79,14 +86,14 @@ type linkView struct {
 // render builds the whole document. Every section is a list and they all
 // flow through the same columns, in config order: the operator's order is
 // the reading order.
-func render(c *config.Config) ([]byte, error) { return build(c, false) }
+func render(c *config.Config, snap status.Snapshot) ([]byte, error) { return build(c, false, snap) }
 
 // buildInline is the same page with every icon embedded as a data: URI,
 // so the result is a single file that works from disk, inside a browser
 // extension, or anywhere the server is not reachable.
-func buildInline(c *config.Config) ([]byte, error) { return build(c, true) }
+func buildInline(c *config.Config) ([]byte, error) { return build(c, true, status.Snapshot{}) }
 
-func build(c *config.Config, inline bool) ([]byte, error) {
+func build(c *config.Config, inline bool, snap status.Snapshot) ([]byte, error) {
 	v := pageView{
 		Title:  c.Title,
 		Lang:   c.Lang,
@@ -105,6 +112,9 @@ func build(c *config.Config, inline bool) ([]byte, error) {
 				URL:  l.URL,
 				Host: hostOf(l.URL),
 				Key:  searchKey(l),
+			}
+			if s.Style == config.StyleLive {
+				lv.Tail, lv.Down = state(snap, l, c.Text)
 			}
 			if store.Valid(l.Name) {
 				lv.Icon = template.URL("/icon/" + icons.Slug(l.Name))
@@ -129,6 +139,38 @@ func build(c *config.Config, inline bool) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// state turns a monitor check into the two things a row shows. A link
+// with no check says nothing at all: an empty tail is honest, a "?" is
+// not.
+func state(snap status.Snapshot, l config.Link, text config.Text) (tail string, down bool) {
+	check, ok := snap.Lookup(l.Check, l.URL)
+	switch {
+	case !ok || check.Muted:
+		return "", false
+	case !check.Up:
+		return strings.TrimSpace(text.Down + " " + compact(check.Down)), true
+	case check.LatencyMS > 0:
+		return strconv.Itoa(check.LatencyMS) + " ms", false
+	}
+	// A probe that landed inside a millisecond reports zero, which is not
+	// "no answer" — that row deserves a number like every other.
+	return "<1 ms", false
+}
+
+// compact writes a duration the way someone glancing at it would say it.
+// A tail that reads "1h23m45.6s" is a machine talking to itself.
+func compact(d time.Duration) string {
+	switch {
+	case d <= 0:
+		return ""
+	case d < time.Hour:
+		return strconv.Itoa(int(d.Minutes())) + "m"
+	case d < 48*time.Hour:
+		return strconv.Itoa(int(d.Hours())) + "h"
+	}
+	return strconv.Itoa(int(d.Hours()/24)) + "d"
 }
 
 // deal spreads sections over n columns in config order, keeping the

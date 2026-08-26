@@ -30,10 +30,25 @@ Icons are fetched once, from each site itself:
 The page shows the browser's globe for a site that serves no icon, and a file
 dropped into `icon_dir` by hand always wins over the fetcher.
 
+## State from a monitor
+
+A `live` section can show what an uptime monitor knows. Point it at a
+[lookout](https://github.com/eeegoloauq/lookout) instance:
+
+```yaml
+status:
+  url: http://monitor.example/api/status
+  every: 30s
+```
+
+Rows are matched to checks by the host they point at, or by an explicit
+`check:` on the link. A matched row shows its last latency, or how long it has
+been down. Nothing is ever written back, the poll runs on its own clock, and a
+monitor that is unreachable simply leaves the rows quiet.
+
 ## Status
 
-Early, and in daily use by its author. Statuses from
-[lookout](https://github.com/eeegoloauq/lookout) are next.
+Early, and in daily use by its author.
 
 ## License
 

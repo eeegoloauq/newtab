@@ -13,6 +13,7 @@ import (
 
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
+	"github.com/eeegoloauq/newtab/internal/status"
 	"github.com/eeegoloauq/newtab/internal/web"
 )
 
@@ -178,9 +179,19 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
+		// The monitor is polled on its own clock; a request never waits
+		// on it, and a monitor that is down costs this page nothing.
+		var snapshot func() status.Snapshot
+		if c.Status.URL != "" {
+			p := &status.Poller{URL: c.Status.URL, Every: c.Status.PollEvery()}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			go p.Run(ctx)
+			snapshot = p.Snapshot
+		}
 		srv := &http.Server{
 			Addr:              c.Listen,
-			Handler:           web.New(c),
+			Handler:           web.New(c, snapshot),
 			ReadHeaderTimeout: 5 * time.Second,
 		}
 		fmt.Printf("newtab %s on http://%s\n", version(), c.Listen)

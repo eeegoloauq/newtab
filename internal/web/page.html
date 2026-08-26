@@ -29,7 +29,7 @@
     <h2>{{$sec.Name}}</h2>
     <ul>
     {{range $sec.Links}}
-      <li><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}"
+      <li{{if .Down}} class="down"{{end}}><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}"
         >{{if .Icon}}<img class="ico" src="{{.Icon}}" alt="" width="20" height="20"
         >{{else}}<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#globe"/></svg>{{end
         }}<span class="name">{{.Name}}</span
