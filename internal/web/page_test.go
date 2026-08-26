@@ -33,11 +33,10 @@ func TestRenderSplitsStyles(t *testing.T) {
 	if strings.Count(html, "<li><a") != 2 {
 		t.Fatalf("expected two rows, got %d", strings.Count(html, "<li><a"))
 	}
-	if strings.Count(html, `class="dot"`) != 1 {
-		t.Fatal("the dot belongs to the live row only")
-	}
-	if !strings.Contains(html, ">music.example.com<") {
-		t.Fatal("the live row should carry its host in the tail")
+	// A row with no icon of its own gets the browser's globe, never an
+	// empty slot: the straight left edge is what holds the page together.
+	if strings.Count(html, `href="#globe"`) != 2 {
+		t.Fatal("every iconless row should draw the globe")
 	}
 }
 

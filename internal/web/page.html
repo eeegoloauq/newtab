@@ -10,11 +10,15 @@
 </head>
 <body data-engine="{{.Engine}}">
 <form class="find" id="find" autocomplete="off">
-  <label for="q">фильтр</label>
+  <label for="q" class="sr">фильтр ссылок или запрос в поиск</label>
   <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false" autofocus
-         aria-describedby="note">
-  <p class="note" id="note" aria-live="polite">Enter — первая ссылка, иначе поиск</p>
+         placeholder="фильтр или запрос" aria-describedby="note">
+  <p class="note" id="note" aria-live="polite">Enter — первая ссылка, иначе поиск. Esc сбрасывает</p>
 </form>
+
+<!-- The icon a browser shows for a page with no favicon of its own. One
+     copy, referenced by every row that needs it. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 3.9 5.7 3.9 9s-1.3 6.3-3.9 9c-2.6-2.7-3.9-5.7-3.9-9S9.4 5.7 12 3z"/></symbol></svg>
 
 <main>
 {{range $sec := .Sections}}
@@ -23,9 +27,8 @@
     <ul>
     {{range $sec.Links}}
       <li><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}"
-        >{{if .Icon}}<img class="ico" src="{{.Icon}}" alt="" width="16" height="16"
-        >{{else}}<span class="ico none" aria-hidden="true"></span>{{end
-        }}{{if $sec.Live}}<span class="dot" aria-hidden="true"></span>{{end
+        >{{if .Icon}}<img class="ico" src="{{.Icon}}" alt="" width="18" height="18"
+        >{{else}}<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#globe"/></svg>{{end
         }}<span class="name">{{.Name}}</span
         >{{if .Tail}}<span class="tail">{{.Tail}}</span>{{end}}</a></li>
     {{end}}

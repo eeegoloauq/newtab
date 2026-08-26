@@ -54,10 +54,12 @@ type linkView struct {
 	// of every list straight, which is the whole reason the icons are
 	// there.
 	Mono string
-	// Tail is what a live row carries after the name: the host today, a
-	// number when something is worth saying about the thing itself. It is
-	// the only place on the page where a value goes, and it is deliberately
-	// the same slot for every row so the columns stay straight.
+	// Tail is what a live row carries after the name: how long it has
+	// been down, or a number about the thing itself. The host used to go
+	// here and was removed — a truncated photo.cdn.egor-solo… told the
+	// reader nothing they did not already know from the name. The slot
+	// stays because it is the one place on the page where a value goes,
+	// and it is the same slot on every row so the columns stay straight.
 	Tail string
 	// Key is what the filter matches against: the name, the host and any
 	// aliases, lowercased and joined. Matching happens in the browser
@@ -85,9 +87,6 @@ func render(c *config.Config) ([]byte, error) {
 				Host: hostOf(l.URL),
 				Key:  searchKey(l),
 				Mono: mono(l.Name),
-			}
-			if s.Style == config.StyleLive {
-				lv.Tail = lv.Host
 			}
 			if store.Path(l.Name) != "" {
 				lv.Icon = "/icon/" + icons.Slug(l.Name)

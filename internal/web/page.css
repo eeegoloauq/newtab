@@ -13,8 +13,10 @@
   --head: #6f6a60;
   --line: #2c2924;
   /* The only colour on the page, and it means one thing: this is down.
-     A brand accent would compete with the links for attention and lose. */
-  --down: #c45c4a;
+     A brand accent would compete with the links for attention and lose.
+     The value is lookout's down red: the same state should be the same
+     colour in both tools. */
+  --down: #ff6d63;
 }
 
 * { box-sizing: border-box; }
@@ -22,10 +24,10 @@
 body {
   margin: 0 auto;
   padding: 7vh 32px 64px;
-  max-width: 1120px;
+  max-width: 1160px;
   background: var(--bg);
   color: var(--ink);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -37,7 +39,20 @@ body {
    sentence you have already read a thousand times. */
 .find { margin: 0 0 40px; }
 
-.find label,
+
+/* The label is for a screen reader only: on screen the placeholder and
+   the note below say the same thing, and a caption over an invisible
+   field is one line of furniture too many. */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 h2 {
   display: block;
   margin: 0 0 8px;
@@ -48,22 +63,24 @@ h2 {
   text-transform: uppercase;
 }
 
+/* No rule under it and no caption over it: the field is where the caret
+   already is when the page opens, and every line drawn around it was
+   furniture. The placeholder names both jobs it does. */
 #q {
   display: block;
-  width: 28ch;
+  width: 36ch;
   max-width: 100%;
-  padding: 2px 0 6px;
+  padding: 2px 0;
   border: 0;
-  border-bottom: 1px solid var(--line);
   background: none;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 18px;
   outline: none;
 }
-/* The caret is enough to say where focus is; recolouring the rule would
-   make the loudest thing on the page a box you are already looking at. */
-#q:focus { border-bottom-color: var(--dim); }
+#q::placeholder { color: var(--dim); }
+/* The caret says where focus is. Nothing else has to. */
+#q:focus::placeholder { color: var(--head); }
 
 .note {
   margin: 6px 0 0;
@@ -89,37 +106,39 @@ li { line-height: 1.9; }
    confetti. */
 li a {
   display: grid;
-  grid-template-columns: 16px max-content minmax(0, 1fr);
+  grid-template-columns: 18px max-content minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
-  color: var(--dim);
+  gap: 10px;
+  /* The links are what you came to read, so they are the brightest thing
+     on the page. Muting them was a mistake: it made an index of 47 names
+     look like a page of disabled controls. */
+  color: var(--ink);
   text-decoration: none;
 }
-.live li a { grid-template-columns: 16px 6px max-content minmax(0, 1fr); }
 
-li a:hover, li a:hover .name { color: var(--ink); }
+/* Hover cannot get brighter than the resting state, so it moves the
+   other way: the row lifts out by underlining, nothing repaints. */
+li a:hover .name { text-decoration: underline; text-underline-offset: 3px; }
 
 /* --- the parts of a row --------------------------------------------- */
-/* Icons stay in colour. At 16px a logo is recognised by its colour, not
-   its shape — greyscale would make them uniform and useless at once. */
-.ico { width: 16px; height: 16px; object-fit: contain; }
+/* Icons stay in colour. At this size a logo is recognised by its colour,
+   rather than by its shape — greyscale would make them uniform and
+   useless at once. 18px against 16px text: big enough to read, small
+   enough that the page stays an index and not a launcher. */
+.ico { width: 18px; height: 18px; object-fit: contain; }
 
-/* One glyph for every site we have no icon for. Monograms were the other
-   option and they are worse: 47 different letters are noisier than 47
-   different favicons. */
-.ico.none {
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--line);
-}
-.dot.down { background: var(--down); }
+/* What a browser draws for a page with no favicon. A monogram was the
+   other option and it is worse: 47 different letters are noisier than 47
+   different favicons, and a letter claims to mean something. */
+svg.ico { color: var(--head); }
 
 .name { white-space: nowrap; }
+
+/* Down is said twice: the name changes colour and the tail says how
+   long. Colour alone would be invisible to a colour-blind reader and
+   ambiguous to everyone else. */
+.down .name { color: var(--down); }
+.down .tail { color: var(--down); }
 
 .tail {
   min-width: 0;
@@ -138,7 +157,7 @@ li a:hover, li a:hover .name { color: var(--ink); }
 /* The first match is what Enter opens. A mark on the left edge says so
    without repainting a block on every keystroke. */
 .hit { box-shadow: inset 2px 0 0 var(--ink); padding-left: 8px; margin-left: -8px; }
-.hit .name { color: var(--ink); }
+.hit .name { text-decoration: underline; text-underline-offset: 3px; }
 
 a:focus-visible { outline: 1px solid var(--dim); outline-offset: 3px; }
 
