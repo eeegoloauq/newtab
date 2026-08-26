@@ -16,10 +16,9 @@ cp config.example.yaml config.yaml   # your links go here
 ./newtab run config.yaml
 ```
 
-Icons are fetched from the sites themselves on the first run and read from
-disk after that, so a page never waits on the network. A site that serves no
-icon gets the globe a browser would draw; a file you put in `icon_dir` yourself
-wins over the fetcher.
+Icons are fetched from the sites themselves on the first run and read from disk
+after that. A site that serves none gets the globe a browser would draw; a file
+you put in `icon_dir` yourself wins over the fetcher.
 
 ## Config
 
@@ -33,14 +32,12 @@ sections:
         alias: [hn]          # also matches when you type this
 ```
 
-`style: list` is bookmarks. `style: live` is for things that can be down — those
-rows can show state, see below. Full example: [config.example.yaml](config.example.yaml).
+`style: list` is bookmarks; `style: live` is things that can be down, and those
+rows can show state. Full example: [config.example.yaml](config.example.yaml).
 
 ## Looks
 
-The colours, the size and a background are config, not a fork. Everything else
-about the page stays the same, which is the point: it is an index, and an index
-has to stay readable.
+Colours, type size, columns and a background are config.
 
 ```yaml
 theme:
@@ -55,7 +52,7 @@ theme:
 ```yaml
 theme:
   image: /var/lib/newtab/dusk.png
-  image_dim: 0.55      # how much of it is shaded, so the text stays text
+  image_dim: 0.55      # how much of it is shaded
 ```
 
 ![With a background](docs/looks/photo.png)
@@ -68,9 +65,8 @@ theme:
 
 ![Larger type](docs/looks/big.png)
 
-`newtab demo -config yours.yaml` renders your own config against invented state,
-which is how these were taken and the only way to see a down row without
-waiting for something to break.
+`newtab demo -config yours.yaml` renders your config against invented state —
+how these were taken, and how to see a down row without waiting for one.
 
 ## Weather
 
@@ -82,9 +78,7 @@ weather:
 ```
 
 Temperature and a glyph beside the field, from
-[Open-Meteo](https://open-meteo.com/) — no account, no key. The condition is a
-drawing rather than a word, so the page still ships no language. The poll is on
-its own clock like the others.
+[Open-Meteo](https://open-meteo.com/). No account, no key.
 
 ## Making it your start page
 
@@ -114,17 +108,14 @@ writes one:
 ./newtab extension config.yaml ./ext
 ```
 
-That is a folder with the page, its icons and a manifest — load it unpacked
+A folder with the page, its icons and a manifest: load it unpacked
 (`chrome://extensions` → Developer mode → Load unpacked, or `about:debugging`
-in Firefox). It is a snapshot: it needs no server and reaches no network, and
-it shows no live state. Rebuild it when your links change.
+in Firefox). It is a snapshot — no server, no network, no live state — so
+rebuild it when your links change. Every
+[release](https://github.com/eeegoloauq/newtab/releases) carries one built from
+the example config.
 
-Every [release](https://github.com/eeegoloauq/newtab/releases) also carries
-`newtab-extension-example.zip`, the same thing built from the example config —
-enough to see what it is before writing your own.
-
-If you do run the server, point the browser at it instead and the page stays
-live: state from the monitor, icons for links you added five seconds ago.
+Running the server instead keeps the page live.
 
 ## State from a monitor
 
@@ -156,7 +147,7 @@ this much, so anything can serve it:
 ]}
 ```
 
-The poll is on its own clock and nothing is written back, so a monitor that is
+Nothing is written back, and the poll is on its own clock, so a monitor that is
 slow or down costs the page nothing.
 
 ## Numbers from Proxmox
@@ -174,10 +165,9 @@ spells that out. `PVEAuditor` is enough. The secret is not in the config file.
 
 ## Notes
 
-The page sends no referrer, so the sites you open are not told where you came
-from. Nothing on it loads from anywhere but your own server.
+The page sends no referrer and loads nothing from anywhere but your own server.
 
 Binaries: [releases](https://github.com/eeegoloauq/newtab/releases).
-A hardened systemd unit: [`contrib/systemd/newtab.service`](contrib/systemd/newtab.service).
+Systemd unit: [`contrib/systemd/newtab.service`](contrib/systemd/newtab.service).
 
 MIT.

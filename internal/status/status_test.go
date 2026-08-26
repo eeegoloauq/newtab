@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -73,9 +74,11 @@ func TestSnapshotBeforeTheFirstPollIsEmptyRatherThanNil(t *testing.T) {
 }
 
 func TestRunKeepsTheLastGoodAnswerWhenAPollFails(t *testing.T) {
-	fail := false
+	// The handler runs on the server's goroutine and the test flips this
+	// from its own, which is a race whatever the timing looks like.
+	var fail atomic.Bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if fail {
+		if fail.Load() {
 			http.Error(w, "no", http.StatusInternalServerError)
 			return
 		}
@@ -96,7 +99,7 @@ func TestRunKeepsTheLastGoodAnswerWhenAPollFails(t *testing.T) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	fail = true
+	fail.Store(true)
 	time.Sleep(50 * time.Millisecond)
 	cancel()
 	if _, ok := p.Snapshot().Lookup("Git", ""); !ok {
