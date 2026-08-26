@@ -118,13 +118,6 @@ func manifest(c *config.Config) []byte {
 			{"src": "/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
 		},
 	}
-	// Not part of the manifest standard, and browsers ignore what they do
-	// not know: it is here so a browser extension opening this page can
-	// paint the same picture while it waits, instead of a flat colour
-	// that turns into a photograph a moment later.
-	if c.Theme.Image != "" {
-		doc["background_image"] = backgroundPath(c.Theme.Image)
-	}
 	body, _ := json.Marshal(doc)
 	return body
 }

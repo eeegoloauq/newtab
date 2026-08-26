@@ -1,14 +1,14 @@
 // The address is kept in both stores: local answers immediately, sync
 // carries it to your other machines. Reading local first is what keeps a
 // new tab from showing anything at all before it redirects.
-chrome.storage.local.get({ url: '', colour: '', picture: null }, function (local) {
-  paint(local.colour, local.picture);
+chrome.storage.local.get({ url: '', colour: '' }, function (local) {
+  paint(local.colour);
   if (local.url) {
     go(local.url);
     return;
   }
   chrome.storage.sync.get({ url: '', colour: '' }, function (synced) {
-    paint(synced.colour, null);
+    paint(synced.colour);
     if (synced.url) {
       // Seen on this machine now; the next tab will not have to ask sync.
       chrome.storage.local.set({ url: synced.url, colour: synced.colour || '' });
@@ -23,19 +23,13 @@ chrome.storage.local.get({ url: '', colour: '', picture: null }, function (local
 // page arriving. Left alone it is the browser's own colour, which is
 // what the flash is; painted in the colour of the page you are going to,
 // there is nothing to see. Other extensions solve it the same way.
-function paint(colour, picture) {
-  var root = document.documentElement;
-  // The stylesheet already painted this dark; anything here only makes
-  // it match the page more closely.
+// The stylesheet has already painted this dark; a colour here only makes
+// the wait match the page more closely. Holding a copy of the page's
+// wallpaper was tried and removed: it bought a fraction of a second and
+// cost a permission prompt over every site you visit.
+function paint(colour) {
   if (/^#[0-9a-f]{6}$/i.test(colour || '')) {
-    root.style.backgroundColor = colour;
-  }
-  // The same picture the page will show, held here so the tab is already
-  // showing it before the page has been asked for.
-  if (picture && picture.data) {
-    root.style.backgroundImage = 'url(' + picture.data + ')';
-    root.style.backgroundSize = 'cover';
-    root.style.backgroundPosition = 'center';
+    document.documentElement.style.backgroundColor = colour;
   }
 }
 

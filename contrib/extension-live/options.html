@@ -27,15 +27,15 @@
 <input id="url" type="url" placeholder="http://127.0.0.1:5669" autofocus spellcheck="false">
 <p id="state"></p>
 
-<label for="colour">colour while it loads — asked of the page itself</label>
+<label for="colour">colour while it loads</label>
 <input id="colour" type="text" placeholder="#141312" spellcheck="false">
 <p id="colourstate"></p>
 <button id="try" disabled>Open a new tab</button>
 
 <p>The colour is what the tab shows for the moment before your page appears.
-It is read from the page once, after you allow it — nothing to look up. Refuse,
-and you can still type it: your page prints it at
-<code>/manifest.webmanifest</code> as <code>background_color</code>.</p>
+Leave it and it stays dark; your page prints its own at
+<code>/manifest.webmanifest</code> as <code>background_color</code> if you want
+them to match.</p>
 
 <p>Running newtab on this machine? That is the address above. Running it on a
 server? Use its address instead. Saved as you type — there is no other button.</p>

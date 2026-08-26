@@ -83,6 +83,15 @@ The photograph in the gallery is
 CC0 — chosen over brighter ones because a background competes with the text
 until it stops being interesting.
 
+## Holding the wallpaper in the extension
+
+The live extension briefly kept a copy of the page's background picture and
+painted it while the page loaded, so a new tab never showed a flat colour first.
+It worked, and it cost a permission prompt over every site you visit plus a
+service worker and a daily alarm to notice a replaced wallpaper — all to hide a
+fraction of a second. Removed. The extension asks for storage and nothing else,
+and the tab waits in a colour you can set by hand.
+
 ## A database
 
 There is no state to keep. The page is a function of the config file.
