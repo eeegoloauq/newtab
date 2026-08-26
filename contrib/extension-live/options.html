@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <title>newtab</title>
 <style>
-  body { margin: 0; padding: 40px; background: #141312; color: #e8e4da;
+  body { margin: 0; padding: 28px; min-width: 34ch; background: #141312; color: #e8e4da;
          font: 15px/1.6 ui-sans-serif, system-ui, sans-serif; }
   label { display: block; color: #8a8478; font-size: 12px; letter-spacing: .06em;
           text-transform: uppercase; margin-bottom: 8px; }
@@ -17,4 +17,6 @@
 <input id="url" type="url" placeholder="https://start.example/" autofocus>
 <p id="saved"></p>
 <p>Saved as you type. Leave it empty to be told about it on the next tab.</p>
+<p>Once an address is set, a new tab goes straight there — this page is then
+reached from the toolbar button, or from <code>chrome://extensions</code>.</p>
 <script src="options.js"></script>

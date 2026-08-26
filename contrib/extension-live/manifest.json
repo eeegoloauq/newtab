@@ -5,5 +5,6 @@
   "description": "Opens your own newtab server on every new tab.",
   "chrome_url_overrides": { "newtab": "newtab.html" },
   "options_page": "options.html",
+  "action": { "default_title": "newtab: address", "default_popup": "options.html" },
   "permissions": ["storage"]
 }
