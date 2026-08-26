@@ -92,7 +92,7 @@ func render(c *config.Config) ([]byte, error) {
 				Key:  searchKey(l),
 				Mono: mono(l.Name),
 			}
-			if store.Path(l.Name) != "" {
+			if store.Valid(l.Name) {
 				lv.Icon = "/icon/" + icons.Slug(l.Name)
 			}
 			sv.Links = append(sv.Links, lv)

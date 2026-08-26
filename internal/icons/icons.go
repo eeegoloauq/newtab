@@ -103,6 +103,26 @@ func (s Store) Path(name string) string {
 	return matches[0]
 }
 
+// Valid reports whether the stored file is really an image. A file
+// written before the fetcher learned to sniff its downloads can be an
+// HTML error page with an .ico name, and it renders as a torn square
+// rather than as nothing — worse than having no icon at all.
+func (s Store) Valid(name string) bool {
+	path := s.Path(name)
+	if path == "" {
+		return false
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	head := make([]byte, 512)
+	n, _ := f.Read(head)
+	head = head[:n]
+	return len(head) > 0 && (strings.HasPrefix(http.DetectContentType(head), "image/") || isSVG(head))
+}
+
 // Fetch downloads the icon for pageURL and writes it into the store.
 // It reports the file written. An error here is never fatal to the page:
 // the caller falls back to a monogram.

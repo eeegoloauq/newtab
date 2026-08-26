@@ -44,8 +44,9 @@ func fetchIcons(c *config.Config, force bool) error {
 	for _, s := range c.Sections {
 		for _, l := range s.Links {
 			// Re-fetching what we already have is a needless request to
-			// someone else's server on every run.
-			if !force && store.Path(l.Name) != "" {
+			// someone else's server on every run. A stored file that is
+			// not an image does not count as having one.
+			if !force && store.Valid(l.Name) {
 				continue
 			}
 			if _, err := store.Fetch(ctx, l.Name, l.URL); err != nil {
