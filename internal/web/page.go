@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -234,18 +235,33 @@ func deal(sections []sectionView, n int) []columnView {
 	}
 	cols := make([]columnView, n)
 	load := make([]int, n)
-	for _, s := range sections {
-		// Order matters more than perfect balance: a section may only go
-		// into the first column that is not taller than the others, so
-		// reading down and across still follows the config.
+	// Longest first, into the shortest column. Taking them in config
+	// order instead left one column twice the height of its neighbours,
+	// which wastes the screen the page exists to fit into. Order inside a
+	// column is restored below, so reading down still follows the config.
+	order := make([]int, len(sections))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		return len(sections[order[a]].Links) > len(sections[order[b]].Links)
+	})
+	placed := make([][]int, n)
+	for _, idx := range order {
 		at := 0
 		for i := 1; i < n; i++ {
 			if load[i] < load[at] {
 				at = i
 			}
 		}
-		cols[at].Sections = append(cols[at].Sections, s)
-		load[at] += len(s.Links) + 2
+		placed[at] = append(placed[at], idx)
+		load[at] += len(sections[idx].Links) + 2
+	}
+	for i, idxs := range placed {
+		sort.Ints(idxs)
+		for _, idx := range idxs {
+			cols[i].Sections = append(cols[i].Sections, sections[idx])
+		}
 	}
 	return cols
 }

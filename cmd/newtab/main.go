@@ -83,10 +83,13 @@ func main() {
 // fetchIcons walks the config and stores what each site serves. A site
 // that refuses is reported and skipped: the page falls back to a
 // monogram, and one hostile site must not fail the whole run.
+// perLink is how long one site may take to give up its icon, across all
+// the candidates it declares. An icon slower than this is not worth the
+// run.
+const perLink = 25 * time.Second
+
 func fetchIcons(c *config.Config, force bool) error {
 	store := icons.Store{Dir: c.IconDir}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
 	var missing []string
 	tried := 0
 	for _, s := range c.Sections {
@@ -98,7 +101,14 @@ func fetchIcons(c *config.Config, force bool) error {
 				continue
 			}
 			tried++
-			if _, err := store.Fetch(ctx, l.Name, l.URL); err != nil {
+			// Each link gets its own budget. One deadline for the whole
+			// run meant a config long enough to matter never finished:
+			// a handful of sites that hang ate the entire allowance and
+			// everything after them was never asked.
+			ctx, cancel := context.WithTimeout(context.Background(), perLink)
+			_, err := store.Fetch(ctx, l.Name, l.URL)
+			cancel()
+			if err != nil {
 				missing = append(missing, l.Name)
 				fmt.Printf("  -- %-22s %v\n", l.Name, err)
 				continue

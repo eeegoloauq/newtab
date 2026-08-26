@@ -108,7 +108,10 @@ type Store struct {
 	Timeout time.Duration
 }
 
-const defaultTimeout = 15 * time.Second
+// A favicon that takes longer than this is not coming. The number is
+// low on purpose: a run walks every link in the config, and each slow
+// site is paid for by every site after it.
+const defaultTimeout = 8 * time.Second
 
 // Path returns the stored file for a link, or "" if there is none. The
 // extension is unknown up front, so this globs.

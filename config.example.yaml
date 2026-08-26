@@ -5,7 +5,7 @@
 title: newtab
 listen: 127.0.0.1:5669
 icon_dir: ./icons
-columns: 5
+columns: 4
 
 search:
   engine: https://duckduckgo.com/?q=%s
