@@ -3,12 +3,13 @@
 <title>newtab</title>
 <style>
   html, body { height: 100%; margin: 0; background: #141312; color: #8a8478;
-               font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; }
+               font: 15px/1.6 ui-sans-serif, system-ui, sans-serif; }
   main { height: 100%; display: grid; place-content: center; text-align: center; }
   a { color: #e8e4da; }
 </style>
-<main id="hint" hidden>
-  <p>No address set yet.</p>
-  <p><a href="#" id="open">Open the options</a> and paste the address of your newtab.</p>
-</main>
+<!-- In the head, not at the end of the body: this page exists to get out
+     of the way, and a script that runs after the first paint is a script
+     that lets the page be seen. The body is empty for the same reason —
+     there is nothing here that could flash before the redirect. -->
 <script src="newtab.js"></script>
+<body></body>
