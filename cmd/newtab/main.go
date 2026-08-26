@@ -174,6 +174,7 @@ func writeExtension(c *config.Config, dir, live string) error {
 	if err != nil {
 		return err
 	}
+	liveRedirect := false
 	manifest, err := editManifest(manifestJSON, func(doc map[string]any) {
 		doc["icons"] = map[string]any{"16": "icon-16.png", "48": "icon-48.png", "128": "icon-128.png"}
 	})
@@ -190,6 +191,7 @@ func writeExtension(c *config.Config, dir, live string) error {
 		page = []byte("<!doctype html><meta charset=utf-8><title>" + c.Title +
 			"</title><meta http-equiv=refresh content=\"0; url=" + u.String() + "\">")
 		script = nil
+		liveRedirect = true
 		manifest, err = withHomepage(manifest, u.String())
 		if err != nil {
 			return err
@@ -200,7 +202,16 @@ func writeExtension(c *config.Config, dir, live string) error {
 	}
 	files := map[string][]byte{
 		"manifest.json": manifest,
-		"newtab.html":   page,
+		// The page itself is not the new tab page: newtab.html is a stub
+		// that redirects here. A tab showing an ordinary extension page
+		// gets its keyboard focus and loses Chrome's new-tab footer,
+		// which is the whole reason for the extra hop.
+		"page.html": page,
+		"newtab.html": []byte("<!doctype html><meta charset=utf-8><title>" + c.Title +
+			"</title><script src=\"go.js\"></script>"),
+		"go.js": []byte("// The tab has to stop being the new tab page before the\n" +
+			"// page can hold the keyboard. replace(), so the empty tab is\n" +
+			"// not in the back history.\nlocation.replace('page.html');\n"),
 	}
 	// Without these Chrome shows a jigsaw piece in the toolbar and on the
 	// extensions page, which looks like something half-installed.
@@ -210,8 +221,34 @@ func writeExtension(c *config.Config, dir, live string) error {
 	if script != nil {
 		files["newtab.js"] = script
 	}
+	if liveRedirect {
+		// Nothing local to show: the stub is the whole extension.
+		files["newtab.html"] = page
+		delete(files, "page.html")
+		delete(files, "go.js")
+	} else {
+		// The icons the page refers to, as files beside it.
+		store := icons.Store{Dir: c.IconDir}
+		for _, s := range c.Sections {
+			for _, l := range s.Links {
+				path := store.Icon(l.Name)
+				if path == "" {
+					continue
+				}
+				body, err := os.ReadFile(path)
+				if err != nil {
+					continue
+				}
+				files[filepath.Join("icons", filepath.Base(path))] = body
+			}
+		}
+	}
 	for name, body := range files {
-		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
+		out := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(out, body, 0o644); err != nil {
 			return err
 		}
 	}

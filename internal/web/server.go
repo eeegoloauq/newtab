@@ -161,6 +161,11 @@ func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, wx weather.
 // the script in a file of its own, because an extension page refuses an
 // inline one.
 func Extension(c *config.Config, scriptName string) (page, script []byte, err error) {
+	// Icons as files in an icons/ directory rather than a megabyte of
+	// base64: the page a person unzips should be one they can open and
+	// read, and a link they want to change should be findable in it.
+	iconBase = "icons/"
+	defer func() { iconBase = "" }()
 	page, err = buildExtension(c, scriptName)
 	return page, Script(), err
 }

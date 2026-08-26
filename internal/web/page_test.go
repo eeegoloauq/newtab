@@ -138,6 +138,22 @@ func TestHypervisorNumbersAreTerseWithASpelledOutHint(t *testing.T) {
 	}
 }
 
+// The browser paints the canvas from this before it has read a line of
+// CSS: dark on a light page is a black flash, and the other way round is
+// a white one.
+func TestColourSchemeFollowsTheConfiguredBackground(t *testing.T) {
+	for background, want := range map[string]string{
+		"":         "dark",
+		"#141312":  "dark",
+		"#f6f3ec":  "light",
+		"nonsense": "dark",
+	} {
+		if got := scheme(background); got != want {
+			t.Errorf("scheme(%q) = %q, want %q", background, got, want)
+		}
+	}
+}
+
 func TestRenderEscapes(t *testing.T) {
 	c := testConfig()
 	c.Sections[1].Links[0].Name = `<script>alert(1)</script>`

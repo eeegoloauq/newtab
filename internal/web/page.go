@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,6 +52,10 @@ type pageView struct {
 	// nowhere to fetch /favicon.svg from, and a tab with no icon looks
 	// like a page that failed to load.
 	Favicon template.URL
+	// Scheme is what the browser paints before the stylesheet is parsed.
+	// Getting it wrong is a black flash on a light page and a white one
+	// on a dark page, and it is decided by one word in the head.
+	Scheme string
 	// Background says a picture is behind the page, so the head can ask
 	// for it early.
 	Background bool
@@ -157,6 +162,12 @@ func buildExtension(c *config.Config, script string) ([]byte, error) {
 	return buildWith(c, true, status.Snapshot{}, proxmox.Stats{}, weather.Now{}, rates.Table{}, script)
 }
 
+// iconBase is where a rendered page looks for icons. Empty means the
+// server's own /icon/ route; "icons/" means files next to the page,
+// which is what the extension ships so its HTML stays small enough to
+// read and edit.
+var iconBase string
+
 func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
 	return buildWith(c, inline, snap, pve, weather.Now{}, rates.Table{}, "")
 }
@@ -174,6 +185,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Theme:      template.CSS(themeCSS(c.Theme, c.Placeholder, inline)),
 		Favicon:    faviconHref(inline),
 		Background: c.Theme.Image != "" && !inline,
+		Scheme:     scheme(c.Theme.Background),
 		Prefixes:   prefixJSON(c.Search.Prefixes),
 	}
 	// A page built as a file has no server behind it to have polled
@@ -210,7 +222,9 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 			}
 			if store.Valid(l.Name) {
 				lv.Icon = template.URL("/icon/" + icons.Slug(l.Name))
-				if inline {
+				if iconBase != "" {
+					lv.Icon = template.URL(iconBase + filepath.Base(store.Icon(l.Name)))
+				} else if inline {
 					// An icon that cannot be read is not worth failing a
 					// whole page over: the row falls back to the globe.
 					if uri, err := icons.DataURI(store.Icon(l.Name)); err == nil {
@@ -326,6 +340,24 @@ func dataURI(path string) (string, error) {
 		return "", fmt.Errorf("%s: %s is not an image", path, kind)
 	}
 	return "data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(body), nil
+}
+
+// scheme reads the configured background and says whether the page is a
+// dark one or a light one. Anything the config did not set is dark,
+// which is what the built-in palette is.
+func scheme(background string) string {
+	if len(background) != 7 {
+		return "dark"
+	}
+	var r, g, b int
+	if _, err := fmt.Sscanf(background, "#%02x%02x%02x", &r, &g, &b); err != nil {
+		return "dark"
+	}
+	// Rough brightness is enough for a yes-or-no about a background.
+	if (r*299+g*587+b*114)/1000 > 128 {
+		return "light"
+	}
+	return "dark"
 }
 
 func faviconHref(inline bool) template.URL {
