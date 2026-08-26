@@ -174,7 +174,12 @@ func writeExtension(c *config.Config, dir, live string) error {
 	if err != nil {
 		return err
 	}
-	manifest := manifestJSON
+	manifest, err := editManifest(manifestJSON, func(doc map[string]any) {
+		doc["icons"] = map[string]any{"16": "icon-16.png", "48": "icon-48.png", "128": "icon-128.png"}
+	})
+	if err != nil {
+		return err
+	}
 	if live != "" {
 		u, err := url.Parse(live)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
@@ -185,7 +190,7 @@ func writeExtension(c *config.Config, dir, live string) error {
 		page = []byte("<!doctype html><meta charset=utf-8><title>" + c.Title +
 			"</title><meta http-equiv=refresh content=\"0; url=" + u.String() + "\">")
 		script = nil
-		manifest, err = withHomepage(manifestJSON, u.String())
+		manifest, err = withHomepage(manifest, u.String())
 		if err != nil {
 			return err
 		}
@@ -196,6 +201,11 @@ func writeExtension(c *config.Config, dir, live string) error {
 	files := map[string][]byte{
 		"manifest.json": manifest,
 		"newtab.html":   page,
+	}
+	// Without these Chrome shows a jigsaw piece in the toolbar and on the
+	// extensions page, which looks like something half-installed.
+	for _, size := range []int{16, 48, 128} {
+		files[fmt.Sprintf("icon-%d.png", size)] = web.AppIcon(size)
 	}
 	if script != nil {
 		files["newtab.js"] = script
@@ -212,11 +222,17 @@ func writeExtension(c *config.Config, dir, live string) error {
 // withHomepage adds the home button override, which Chrome only accepts
 // as a real URL — an extension page cannot be a homepage, only a new tab.
 func withHomepage(manifest []byte, live string) ([]byte, error) {
+	return editManifest(manifest, func(doc map[string]any) {
+		doc["chrome_settings_overrides"] = map[string]any{"homepage": live}
+	})
+}
+
+func editManifest(manifest []byte, edit func(map[string]any)) ([]byte, error) {
 	var doc map[string]any
 	if err := json.Unmarshal(manifest, &doc); err != nil {
 		return nil, err
 	}
-	doc["chrome_settings_overrides"] = map[string]any{"homepage": live}
+	edit(doc)
 	return json.MarshalIndent(doc, "", "  ")
 }
 

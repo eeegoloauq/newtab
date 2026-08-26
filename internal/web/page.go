@@ -6,10 +6,13 @@ package web
 import (
 	"bytes"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,6 +46,14 @@ type pageView struct {
 	// Theme is the CSS custom properties the config overrides, already
 	// checked to be colours and sizes.
 	Theme template.CSS
+	// Favicon is a path when a server is behind the page and the icon
+	// itself when there is not: a saved file and an extension page have
+	// nowhere to fetch /favicon.svg from, and a tab with no icon looks
+	// like a page that failed to load.
+	Favicon template.URL
+	// Background says a picture is behind the page, so the head can ask
+	// for it early.
+	Background bool
 	// Standalone drops the links a served page has and a file cannot use:
 	// a manifest and an icon fetched by path mean nothing inside an
 	// extension or a saved file.
@@ -160,7 +171,9 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Engine:     c.Search.Engine,
 		CSS:        template.CSS(pageCSS),
 		JS:         template.JS(pageJS),
-		Theme:      template.CSS(themeCSS(c.Theme)),
+		Theme:      template.CSS(themeCSS(c.Theme, c.Placeholder, inline)),
+		Favicon:    faviconHref(inline),
+		Background: c.Theme.Image != "" && !inline,
 		Prefixes:   prefixJSON(c.Search.Prefixes),
 	}
 	// A page built as a file has no server behind it to have polled
@@ -302,10 +315,30 @@ func prefixJSON(prefixes map[string]string) string {
 	return string(body)
 }
 
+// dataURI reads a file as a data: URI, for the standalone page.
+func dataURI(path string) (string, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	kind := http.DetectContentType(body)
+	if !strings.HasPrefix(kind, "image/") {
+		return "", fmt.Errorf("%s: %s is not an image", path, kind)
+	}
+	return "data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(body), nil
+}
+
+func faviconHref(inline bool) template.URL {
+	if !inline {
+		return "/favicon.svg"
+	}
+	return template.URL("data:image/svg+xml," + url.PathEscape(FaviconSVG))
+}
+
 // themeCSS turns the config's overrides into custom properties. Every
 // value here was checked by the config: colours are hex, sizes are in
 // range, and nothing else reaches this string.
-func themeCSS(t config.Theme) string {
+func themeCSS(t config.Theme, placeholder string, inline bool) string {
 	var b strings.Builder
 	b.WriteString(":root{")
 	for prop, value := range map[string]string{
@@ -329,7 +362,24 @@ func themeCSS(t config.Theme) string {
 		// The photograph goes behind a shade, because the page is text
 		// and text on a photograph is the oldest way to make it
 		// unreadable.
-		b.WriteString("body{background:var(--shade) url(/background) center/cover fixed;background-blend-mode:darken;}")
+		// Two layers: the picture, and underneath it the same picture at
+		// the size of a stamp, embedded in this stylesheet. The stamp is
+		// there for the moment before the real one has arrived.
+		layers := "url(/background)"
+		if inline {
+			// A file has no server to fetch /background from, so the
+			// picture travels inside it or not at all.
+			if data, err := dataURI(t.Image); err == nil {
+				layers = "url(" + data + ")"
+			} else if placeholder != "" {
+				layers = "url(" + placeholder + ")"
+			}
+		} else if placeholder != "" {
+			layers += ",url(" + placeholder + ")"
+		}
+		fmt.Fprintf(&b, "body{background-color:var(--shade);background-image:%s;"+
+			"background-size:cover;background-position:center;background-attachment:fixed;"+
+			"background-blend-mode:darken;}", layers)
 		// A photograph has bright patches wherever it likes, and the
 		// quiet inks disappear into them: measured over the bright part
 		// of a photograph, headings fell to 2.6:1 against 7.4:1 for the

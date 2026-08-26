@@ -37,6 +37,9 @@ type Config struct {
 	// Notes are things worth saying out loud that are not errors. The
 	// CLI prints them; nothing else reads them.
 	Notes []string `yaml:"-"`
+	// Placeholder is the background image shrunk to a data URI, computed
+	// once when the config is read. It is not a setting.
+	Placeholder string `yaml:"-"`
 
 	Title  string `yaml:"title"`
 	Listen string `yaml:"listen"`
@@ -406,6 +409,11 @@ func (c *Config) validate() error {
 		// Measured advice, not a decision: where the text falls on the
 		// picture depends on the window, so the number is an estimate
 		// and the operator is the one looking at the result.
+		// One decode at startup buys a first paint that is the picture
+		// rather than a flat colour.
+		if uri, err := backdrop.Placeholder(c.Theme.Image); err == nil {
+			c.Placeholder = uri
+		}
 		if want, err := backdrop.Recommend(c.Theme.Image); err == nil && c.Theme.ImageDim+0.02 < want {
 			c.Notes = append(c.Notes, fmt.Sprintf(
 				"theme.image_dim is %.2f; this picture is bright enough to need about %.2f for the group headings to stay readable",

@@ -1,8 +1,9 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>newtab</title>
+<link rel="icon" href="icon-48.png">
 <style>
-  body { margin: 0; padding: 28px; min-width: 34ch; background: #141312; color: #e8e4da;
+  body { margin: 0; padding: 28px; min-width: 36ch; background: #141312; color: #e8e4da;
          font: 15px/1.6 ui-sans-serif, system-ui, sans-serif; }
   label { display: block; color: #8a8478; font-size: 12px; letter-spacing: .06em;
           text-transform: uppercase; margin-bottom: 8px; }
@@ -10,15 +11,27 @@
           border-bottom: 1px solid #2c2924; background: none; color: #e8e4da;
           font: inherit; font-size: 17px; outline: none; }
   input:focus { border-bottom-color: #e8e4da; }
-  p { color: #8a8478; max-width: 46ch; }
-  #saved { color: #8a8478; min-height: 1.4em; font-size: 13px; }
+  /* One line that always says what the state is: saved, cleared, or what
+     is wrong with what was typed. Silence after typing an address reads
+     as "nothing happened". */
+  #state { min-height: 1.5em; margin: 10px 0 18px; font-size: 13px; color: #8a8478; }
+  #state.bad { color: #ff6d63; }
+  button { padding: 8px 14px; border: 1px solid #2c2924; border-radius: 8px;
+           background: none; color: #e8e4da; font: inherit; font-size: 14px; cursor: pointer; }
+  button:hover:enabled { border-color: #8a8478; }
+  button:disabled { color: #6f6a60; cursor: default; }
+  p { color: #8a8478; max-width: 44ch; font-size: 13px; }
 </style>
+
 <label for="url">address of your newtab</label>
-<input id="url" type="url" placeholder="http://127.0.0.1:5669" autofocus>
-<p id="saved"></p>
+<input id="url" type="url" placeholder="http://127.0.0.1:5669" autofocus spellcheck="false">
+<p id="state"></p>
+<button id="try" disabled>Open a new tab</button>
+
 <p>Running newtab on this machine? That is the address above. Running it on a
-server? Use its address instead.</p>
-<p>Saved as you type. Leave it empty to be told about it on the next tab.</p>
-<p>Once an address is set, a new tab goes straight there — this page is then
-reached from the toolbar button, or from <code>chrome://extensions</code>.</p>
+server? Use its address instead. Saved as you type — there is no other button.</p>
+<p>With an address set, a new tab goes straight there, so this page is reached
+from the toolbar button or <code>chrome://extensions</code>. Empty it to get the
+reminder back.</p>
+
 <script src="options.js"></script>

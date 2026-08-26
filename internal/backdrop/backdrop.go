@@ -9,10 +9,13 @@
 package backdrop
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"image"
+	"image/color"
 	_ "image/gif"
-	_ "image/jpeg"
+	"image/jpeg"
 	_ "image/png"
 	"math"
 	"os"
@@ -75,6 +78,56 @@ func Recommend(path string) (float64, error) {
 		dim = 0.95
 	}
 	return dim, nil
+}
+
+// Placeholder is the picture at the size of a postage stamp, as a data
+// URI. It goes underneath the real background so the first paint is the
+// picture, blurred, instead of a flat colour that jumps to a photograph
+// a moment later.
+func Placeholder(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	if err != nil {
+		return "", err
+	}
+	b := img.Bounds()
+	const width = 32
+	height := width * b.Dy() / b.Dx()
+	if height < 1 {
+		height = 1
+	}
+	small := image.NewRGBA(image.Rect(0, 0, width, height))
+	// A box average, not a resampler: at this size the result is a blur
+	// either way, and the blur is the point.
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			var rs, gs, bs, n uint64
+			x0, x1 := b.Min.X+x*b.Dx()/width, b.Min.X+(x+1)*b.Dx()/width
+			y0, y1 := b.Min.Y+y*b.Dy()/height, b.Min.Y+(y+1)*b.Dy()/height
+			for sy := y0; sy < y1; sy++ {
+				for sx := x0; sx < x1; sx++ {
+					r, g, bb, _ := img.At(sx, sy).RGBA()
+					rs += uint64(r >> 8)
+					gs += uint64(g >> 8)
+					bs += uint64(bb >> 8)
+					n++
+				}
+			}
+			if n == 0 {
+				continue
+			}
+			small.Set(x, y, color.RGBA{uint8(rs / n), uint8(gs / n), uint8(bs / n), 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, small, &jpeg.Options{Quality: 60}); err != nil {
+		return "", err
+	}
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
 func luminance(r, g, b float64) float64 {

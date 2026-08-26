@@ -14,8 +14,8 @@ import (
 // is no binary asset in the repository and no second place to keep the
 // palette.
 var (
-	iconOnce sync.Once
-	iconPNG  = map[int][]byte{}
+	iconMu  sync.Mutex
+	iconPNG = map[int][]byte{}
 )
 
 // FaviconSVG is the same motif as a scalable icon: four rows, the first
@@ -33,12 +33,14 @@ const FaviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 // AppIcon returns a square PNG of the given size for the web app manifest
 // and for the icon a phone puts on its home screen.
 func AppIcon(size int) []byte {
-	iconOnce.Do(func() {
-		for _, s := range []int{192, 512} {
-			iconPNG[s] = drawIcon(s)
-		}
-	})
-	return iconPNG[size]
+	iconMu.Lock()
+	defer iconMu.Unlock()
+	if png, ok := iconPNG[size]; ok {
+		return png
+	}
+	png := drawIcon(size)
+	iconPNG[size] = png
+	return png
 }
 
 func drawIcon(size int) []byte {
@@ -50,6 +52,10 @@ func drawIcon(size int) []byte {
 	draw.Draw(img, img.Bounds(), &image.Uniform{bg}, image.Point{}, draw.Src)
 
 	unit := size / 16
+	if unit < 1 {
+		// Below 16px the motif has no room; one row is still a mark.
+		unit = 1
+	}
 	rows := []struct {
 		y, w int
 		c    color.RGBA
