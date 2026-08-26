@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/eeegoloauq/newtab/internal/backdrop"
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
 	"github.com/eeegoloauq/newtab/internal/proxmox"
@@ -187,7 +188,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Engine:     c.Search.Engine,
 		CSS:        template.CSS(pageCSS),
 		JS:         template.JS(pageJS),
-		Theme:      template.CSS(themeCSS(c.Theme, c.Fingerprint, c.Average, inline)),
+		Theme:      template.CSS(themeCSS(c.Theme, c.Average, inline)),
 		Favicon:    faviconHref(inline),
 		Background: backgroundHref(c, inline),
 		Scheme:     scheme(c.Theme.Background),
@@ -351,8 +352,9 @@ func dataURI(path string) (string, error) {
 // backgroundPath is where the picture lives: its name carries the
 // digest, so a changed picture is a changed URL and an unchanged one is
 // never asked about twice.
-func backgroundPath(fingerprint string) string {
-	if fingerprint == "" {
+func backgroundPath(image string) string {
+	fingerprint, err := backdrop.Fingerprint(image)
+	if err != nil || fingerprint == "" {
 		return "/background"
 	}
 	// A segment, not a suffix: the router's patterns take a wildcard
@@ -364,7 +366,7 @@ func backgroundHref(c *config.Config, inline bool) string {
 	if c.Theme.Image == "" || inline {
 		return ""
 	}
-	return backgroundPath(c.Fingerprint)
+	return backgroundPath(c.Theme.Image)
 }
 
 // darken multiplies a hex colour towards black, the way the shade layer
@@ -418,7 +420,7 @@ func faviconHref(inline bool) template.URL {
 // themeCSS turns the config's overrides into custom properties. Every
 // value here was checked by the config: colours are hex, sizes are in
 // range, and nothing else reaches this string.
-func themeCSS(t config.Theme, fingerprint, average string, inline bool) string {
+func themeCSS(t config.Theme, average string, inline bool) string {
 	var b strings.Builder
 	b.WriteString(":root{")
 	for prop, value := range map[string]string{
@@ -451,7 +453,7 @@ func themeCSS(t config.Theme, fingerprint, average string, inline bool) string {
 		// of times a day cannot afford a network round trip for its
 		// background, and the round trip — not the file size — was what
 		// showed as a flash.
-		src := backgroundPath(fingerprint)
+		src := backgroundPath(t.Image)
 		if inline {
 			// A file has no server to fetch it from, so the picture
 			// travels inside the file or not at all.

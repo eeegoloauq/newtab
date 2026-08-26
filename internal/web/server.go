@@ -123,7 +123,7 @@ func manifest(c *config.Config) []byte {
 	// paint the same picture while it waits, instead of a flat colour
 	// that turns into a photograph a moment later.
 	if c.Theme.Image != "" {
-		doc["background_image"] = backgroundPath(c.Fingerprint)
+		doc["background_image"] = backgroundPath(c.Theme.Image)
 	}
 	body, _ := json.Marshal(doc)
 	return body

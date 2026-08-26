@@ -9,14 +9,18 @@
 package backdrop
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"math"
 	"os"
 	"sort"
+	"sync"
 )
 
 // safeLuminance is where the shaded picture has to land for the quiet
@@ -76,6 +80,43 @@ func Recommend(path string) (float64, error) {
 	}
 	return dim, nil
 }
+
+// Fingerprint is the first bytes of the file's digest, recomputed when
+// the file changes. It has to be a function of the file as it is now,
+// not as it was at startup: the address it produces is cached for a
+// year, so a stale one is a wallpaper nobody can replace.
+func Fingerprint(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	key := fmt.Sprintf("%s|%d|%d", path, info.Size(), info.ModTime().UnixNano())
+
+	fingerprintMu.Lock()
+	defer fingerprintMu.Unlock()
+	if sum, ok := fingerprints[key]; ok {
+		return sum, nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	sum := hex.EncodeToString(h.Sum(nil))[:12]
+	// One entry per file version; a wallpaper does not change often
+	// enough for this to be worth evicting.
+	fingerprints = map[string]string{key: sum}
+	return sum, nil
+}
+
+var (
+	fingerprintMu sync.Mutex
+	fingerprints  = map[string]string{}
+)
 
 // Average is the picture's mean colour as a CSS hex string. It is what
 // the page is painted with before anything has decoded: black behind a

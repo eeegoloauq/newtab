@@ -7,10 +7,7 @@
 package config
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
 	"os"
@@ -40,13 +37,10 @@ type Config struct {
 	// Notes are things worth saying out loud that are not errors. The
 	// CLI prints them; nothing else reads them.
 	Notes []string `yaml:"-"`
-	// Average is the background's mean colour and Fingerprint the first
-	// bytes of its digest, both computed once when the config is read.
-	// Neither is a setting: one paints the page while the picture is on
-	// its way, the other puts the picture behind a URL that can be
-	// cached forever.
-	Average     string `yaml:"-"`
-	Fingerprint string `yaml:"-"`
+	// Average is the background's mean colour, computed once when the
+	// config is read. It is not a setting: it paints the page while the
+	// picture is on its way.
+	Average string `yaml:"-"`
 
 	Title  string `yaml:"title"`
 	Listen string `yaml:"listen"`
@@ -353,21 +347,6 @@ func (c *Config) applyDefaults() {
 	}
 }
 
-// fingerprint is the first bytes of the file's digest, which is enough
-// to change the URL when the file changes and short enough to read.
-func fingerprint(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(h.Sum(nil))[:12], nil
-}
-
 func (c *Config) hasLink(name string) bool {
 	for _, s := range c.Sections {
 		for _, l := range s.Links {
@@ -433,9 +412,6 @@ func (c *Config) validate() error {
 		// and the operator is the one looking at the result.
 		// One decode at startup buys a first paint that is the picture
 		// rather than a flat colour.
-		if sum, err := fingerprint(c.Theme.Image); err == nil {
-			c.Fingerprint = sum
-		}
 		if avg, err := backdrop.Average(c.Theme.Image); err == nil {
 			c.Average = avg
 		}
