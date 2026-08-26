@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>{{.Title}}</title>
+<style>{{.CSS}}</style>
+</head>
+<body data-engine="{{.Engine}}">
+<form class="find" id="find" autocomplete="off">
+  <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+         autofocus placeholder="начни печатать" aria-label="Фильтр ссылок и поиск в интернете">
+  <p class="note" id="note" aria-live="polite"></p>
+</form>
+
+<main>
+{{if .Cards}}
+<div class="cards">
+{{range .Cards}}
+  <section class="sec" data-sec>
+    <h2>{{.Name}}</h2>
+    <div class="grid">
+    {{range .Links}}
+      <a class="card" href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}">
+        <span class="name">{{.Name}}</span>
+        <span class="host">{{.Host}}</span>
+      </a>
+    {{end}}
+    </div>
+  </section>
+{{end}}
+</div>
+{{end}}
+
+{{if .Lists}}
+<div class="lists">
+{{range .Lists}}
+  <section class="sec" data-sec>
+    <h2>{{.Name}}</h2>
+    <ul>
+    {{range .Links}}
+      <li><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}">{{.Name}}</a></li>
+    {{end}}
+    </ul>
+  </section>
+{{end}}
+</div>
+{{end}}
+</main>
+
+<script>{{.JS}}</script>
+</body>
+</html>

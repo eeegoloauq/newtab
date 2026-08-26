@@ -1,0 +1,132 @@
+/* One screen, dark, no wallpaper. Every value here is deliberate: this
+   page opens dozens of times a day, so nothing may move, flash or fade
+   after the first paint. */
+:root {
+  --bg: #0a0b0d;
+  --ink: #e7e8ec;
+  --dim: #9aa0aa;
+  --faint: #6b7079;
+  --line: rgba(255, 255, 255, .09);
+  --panel: rgba(255, 255, 255, .035);
+  --accent: #7fd6bb;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0 auto;
+  padding: 8vh 28px 64px;
+  max-width: 1180px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- search ------------------------------------------------------- */
+/* A single line, not a box: the page below is the result set, so the
+   field must not look like a separate destination. Nothing is blurred or
+   dimmed while typing — the list underneath is what you are reading. */
+.find { margin: 0 0 44px; }
+
+#q {
+  width: 100%;
+  padding: 6px 2px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 22px;
+  outline: none;
+}
+#q::placeholder { color: var(--faint); }
+#q:focus { border-bottom-color: var(--accent); }
+/* The browser's own clear button in a text field would be a second way
+   to do what Escape does; the field is type=text so it never appears. */
+
+.note {
+  margin: 10px 2px 0;
+  min-height: 1.2em;
+  color: var(--faint);
+  font-size: 13px;
+}
+.note b { color: var(--dim); font-weight: 500; }
+
+/* --- cards: things with a state ----------------------------------- */
+.cards { margin-bottom: 52px; }
+
+.sec { margin: 0 0 28px; break-inside: avoid; }
+
+h2 {
+  margin: 0 0 12px;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  /* Equal rows: a two-line name must not make its card taller than the
+     one beside it. */
+  grid-auto-rows: 1fr;
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+}
+.card .name { font-weight: 500; }
+.card .host {
+  color: var(--faint);
+  font-size: 12px;
+  /* One line: the host is a reminder of where the link goes, not
+     something to read. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card:hover { border-color: rgba(255, 255, 255, .22); }
+
+/* --- lists: plain bookmarks --------------------------------------- */
+/* Newspaper columns rather than a grid: the sections have wildly
+   different lengths and a grid would leave holes under the short ones. */
+.lists { column-width: 210px; column-gap: 32px; }
+
+.lists ul { margin: 0; padding: 0; list-style: none; }
+.lists li { line-height: 1.85; }
+.lists a { color: var(--dim); text-decoration: none; }
+.lists a:hover { color: var(--ink); }
+
+/* --- filtering ---------------------------------------------------- */
+.out { display: none; }
+
+/* The first match is what Enter opens, so it has to be visible without
+   reading — a left mark rather than a background, which would repaint a
+   large area on every keystroke. */
+.hit { box-shadow: inset 2px 0 0 var(--accent); }
+.card.hit { box-shadow: inset 0 0 0 1px var(--accent); border-color: transparent; }
+.lists .hit { padding-left: 8px; margin-left: -8px; color: var(--ink); }
+
+/* The field already says it has focus with its underline; a second ring
+   around a full-width box reads as an error state. */
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  body { padding: 5vh 16px 48px; }
+  #q { font-size: 19px; }
+  .lists { column-width: auto; column-count: 1; }
+}

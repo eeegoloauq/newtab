@@ -1,0 +1,46 @@
+# Every address here is a documentation host on purpose: this file ships
+# in the repo, the real one does not.
+title: newtab
+listen: 127.0.0.1:5669
+
+search:
+  # %s is the query. Any engine works; this is not a provider list.
+  engine: https://www.google.com/search?q=%s
+
+sections:
+  # style: cards — things that can be down, drawn as tiles.
+  - name: Infra
+    style: cards
+    links:
+      - name: Hypervisor
+        url: https://198.51.100.10:8006/
+      - name: Proxy
+        url: http://198.51.100.11:81/
+      - name: Git
+        url: http://198.51.100.12:3000/
+
+  - name: Services
+    style: cards
+    links:
+      - name: Photos
+        url: https://photos.example.com/
+      - name: Music
+        url: https://music.example.com/
+        alias: [музыка]
+
+  # style: list — plain bookmarks, no icon, no status, packed tight.
+  - name: Work
+    style: list
+    links:
+      - name: Search Console
+        url: https://search.google.com/search-console
+      - name: GitHub
+        url: https://github.com/
+
+  - name: Personal
+    style: list
+    links:
+      - name: YouTube
+        url: https://www.youtube.com/
+      - name: Reddit
+        url: https://www.reddit.com/
