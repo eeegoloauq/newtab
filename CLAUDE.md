@@ -1,7 +1,8 @@
 # newtab
 
-Start page. One Go binary, one YAML file, one HTML page. No database, no build
-step, no npm, one module (a YAML parser).
+Start page. Renders one HTML page from a YAML file, fetches the icon of every
+site it links to, and reads a monitor and a hypervisor to put their numbers on
+the matching rows.
 
 ## Layout
 

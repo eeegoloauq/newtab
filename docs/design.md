@@ -1,7 +1,7 @@
 # Decisions
 
-What this page is, and what it deliberately is not. Everything here was built,
-looked at, and removed — the notes exist so it is not rebuilt.
+Everything here was built, looked at, and removed. The notes exist so that none
+of it gets built a second time.
 
 ## Tiles
 

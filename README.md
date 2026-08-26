@@ -1,39 +1,42 @@
 # newtab
 
-A start page for the browser: every link on one screen, filtered as you type.
+A start page: everything you open on one screen, filtered as you type.
 
 ![The demo page](docs/screenshot.png)
 
-One Go binary, one YAML file, one HTML page. No build step, no npm, no
-framework, and nothing on the page talks to anyone but this server.
+Type anywhere — the first keystroke lands in the field and the links narrow as
+you go. Enter opens the first match, or searches the web with what you typed.
+Arrows walk the matches, Escape clears. Links open in the tab you are in,
+because that is the tab you opened to go somewhere.
 
-- **One screen.** No tabs, no folders, no hunting for a group.
-- **Type anywhere.** The first keystroke lands in the field and the links filter
-  in place; Enter opens the first match, or searches the web with what you
-  typed. Arrows walk the matches, Escape clears.
-- **Icons from the sites themselves,** fetched once and served from here. Never
-  through a favicon service — asking one for your links hands it the list.
-- **Optional state.** A row can show what an uptime monitor knows about it, and
-  a hypervisor can put its numbers on its own row.
+Sections come in two kinds. `list` is plain bookmarks: icon, name. `live` is for
+things that can be down, and those rows can carry state — how long something has
+been down, or a number about it.
 
-## Try it
+## Why it is a program and not a file
+
+The page is static, and you can have it as a file: `newtab render -inline
+config.yaml page.html` writes the whole thing, icons and all, into one HTML
+document that works from disk. If links are all you want, stop there.
+
+The program earns its place on the three things a file cannot do:
+
+- fetch each site's own icon once and serve it from your own origin,
+- read an uptime monitor and put what it says on the matching rows,
+- read the Proxmox API, which needs a token that must never be inside a page
+  the browser loads.
+
+## Running it
 
 ```sh
 go build ./cmd/newtab
-./newtab demo            # the page above, on invented state
-```
+./newtab demo                        # the page above, on invented state
 
-## Use it
-
-```sh
-cp config.example.yaml config.yaml   # edit it
+cp config.example.yaml config.yaml   # then edit it
 ./newtab validate config.yaml
-./newtab icons config.yaml           # fetch each site's own icon
+./newtab icons config.yaml           # fetch each site's icon
 ./newtab run config.yaml
 ```
-
-A section is either `live` — things that can be down, whose rows carry state —
-or `list`, plain bookmarks. Both are lists in the same columns.
 
 ```yaml
 sections:
@@ -45,12 +48,10 @@ sections:
         alias: [hn]          # also matches when you type this
 ```
 
-The page shows the browser's globe for a site that serves no icon of its own,
-and a file dropped into `icon_dir` by hand always beats the fetcher.
-
-`newtab render -inline config.yaml page.html` writes the whole page, icons
-embedded, as a single file — useful inside a browser extension, or for when the
-server is not reachable.
+Icons come from the sites themselves, never through a favicon service: asking
+one for forty icons hands it your list of links. A site that serves none gets
+the globe a browser would draw, and a file you drop into `icon_dir` yourself
+always beats the fetcher.
 
 ## State from a monitor
 
@@ -77,8 +78,8 @@ document it reads is small enough to serve from anything:
 ]}
 ```
 
-Nothing is ever written back, the poll runs on its own clock, and a monitor
-that is unreachable leaves the rows quiet rather than blank.
+The poll runs on its own clock and nothing is written back, so a monitor that is
+slow or unreachable costs the page nothing: the rows go quiet, not blank.
 
 ## Numbers from Proxmox
 
@@ -90,16 +91,17 @@ proxmox:
   insecure: true                    # it answers with its own certificate
 ```
 
-The row reads `16 · 29% · 51%` — guests running, cpu, memory — and the tooltip
-spells that out. A token holding `PVEAuditor` is enough; the secret stays out
-of the config file.
+That row then reads `16 · 29% · 51%` — guests running, cpu, memory — and hovering
+it spells that out. A token holding `PVEAuditor` is enough, and the secret stays
+out of the config file.
 
 ## Install
 
 Binaries for linux/amd64 and arm64 are attached to each
-[release](https://github.com/eeegoloauq/newtab/releases). It wants no state
-beyond its config and its icon directory; `contrib/systemd/newtab.service` is a
-hardened unit to copy.
+[release](https://github.com/eeegoloauq/newtab/releases). There is no state to
+keep beyond the config and the icon directory;
+[`contrib/systemd/newtab.service`](contrib/systemd/newtab.service) is a hardened
+unit to copy.
 
 ## License
 

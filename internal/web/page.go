@@ -72,9 +72,9 @@ type linkView struct {
 	// this colour and in the tail, because colour alone is not something
 	// every reader can see.
 	Down bool
-	// TailHint explains the tail on hover. Three bare numbers are terse
-	// enough to fit the column and too terse to be obvious the first
-	// time, and a tooltip costs the page nothing until it is asked for.
+	// TailHint explains the tail on hover, and it sits on the row rather
+	// than on the numbers: a tooltip you have to find the right three
+	// characters to hover over is a tooltip nobody sees.
 	TailHint string
 	// Tail is what a live row carries after the name: how long it has
 	// been down, or a number about the thing itself. The host used to go

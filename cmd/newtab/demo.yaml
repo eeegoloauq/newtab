@@ -1,104 +1,94 @@
-# A start page. Everything on one screen, filtered as you type.
-#
-# The links below are a demonstration, not a recommendation — swap them
-# for yours. Anything not a link name has a sane English default, so the
-# shortest working config is a title and a section.
+# The page `newtab demo` draws. The links are a shop window: they are
+# there to show what forty-odd rows look like, not to be a recommendation.
 
 title: newtab
 listen: 127.0.0.1:5669
 icon_dir: ""
-columns: 4
+columns: 5
 
 search:
-  # %s is where the query goes. Any engine works.
   engine: https://duckduckgo.com/?q=%s
 
 sections:
-  # style: live — things that can be down. Their rows can show what a
-  # monitor knows; see `status` at the bottom.
   - name: Home
     style: live
     links:
-      - name: Hypervisor
-        url: https://198.51.100.10:8006/
-      - name: Files
-        url: https://files.example.com/
-        check: Files
-      - name: Photos
-        url: https://photos.example.com/
-        alias: [pictures]
-        check: Photos
-      - name: Music
-        url: https://music.example.com/
-        check: Music
-      - name: Git
-        url: http://198.51.100.12:3000/
-        check: Git
+      - {name: Hypervisor, url: "https://198.51.100.10:8006/"}
+      - {name: Photos, url: "https://photos.example.com/", check: Photos}
+      - {name: Music, url: "https://music.example.com/", check: Music}
+      - {name: Files, url: "https://files.example.com/", check: Files}
+      - {name: Git, url: "http://198.51.100.12:3000/", check: Git}
 
-  # style: list — plain bookmarks. Icon, name, nothing else.
   - name: Read
     style: list
     links:
-      - name: Hacker News
-        url: https://news.ycombinator.com/
-        alias: [hn]
-      - name: Lobsters
-        url: https://lobste.rs/
-      - name: Wikipedia
-        url: https://en.wikipedia.org/
-      - name: arXiv
-        url: https://arxiv.org/
-      - name: Marginalia
-        url: https://search.marginalia.nu/
-      - name: Internet Archive
-        url: https://archive.org/
+      - {name: Hacker News, url: "https://news.ycombinator.com/", alias: [hn]}
+      - {name: Reddit, url: "https://www.reddit.com/"}
+      - {name: The Verge, url: "https://www.theverge.com/"}
+      - {name: Ars Technica, url: "https://arstechnica.com/"}
+      - {name: Wikipedia, url: "https://en.wikipedia.org/"}
+      - {name: arXiv, url: "https://arxiv.org/"}
+      - {name: Substack, url: "https://substack.com/"}
+      - {name: Internet Archive, url: "https://archive.org/"}
 
   - name: Code
     style: list
     links:
-      - name: GitHub
-        url: https://github.com/
-      - name: Go Packages
-        url: https://pkg.go.dev/
-      - name: MDN
-        url: https://developer.mozilla.org/
-      - name: Stack Overflow
-        url: https://stackoverflow.com/
-      - name: crates.io
-        url: https://crates.io/
-      - name: Godbolt
-        url: https://godbolt.org/
-        alias: [compiler explorer]
+      - {name: GitHub, url: "https://github.com/"}
+      - {name: GitLab, url: "https://gitlab.com/"}
+      - {name: Stack Overflow, url: "https://stackoverflow.com/"}
+      - {name: MDN, url: "https://developer.mozilla.org/"}
+      - {name: Go Packages, url: "https://pkg.go.dev/"}
+      - {name: npm, url: "https://www.npmjs.com/"}
+      - {name: Docker Hub, url: "https://hub.docker.com/"}
+      - {name: Godbolt, url: "https://godbolt.org/", alias: [compiler explorer]}
 
-  - name: Tools
+  - name: Watch
     style: list
     links:
-      - name: Excalidraw
-        url: https://excalidraw.com/
-      - name: regex101
-        url: https://regex101.com/
-      - name: explainshell
-        url: https://explainshell.com/
-      - name: Wolfram Alpha
-        url: https://www.wolframalpha.com/
-      - name: CyberChef
-        url: https://gchq.github.io/CyberChef/
+      - {name: YouTube, url: "https://www.youtube.com/"}
+      - {name: Netflix, url: "https://www.netflix.com/"}
+      - {name: Twitch, url: "https://www.twitch.tv/"}
+      - {name: Letterboxd, url: "https://letterboxd.com/"}
+      - {name: IMDb, url: "https://www.imdb.com/"}
+      - {name: Vimeo, url: "https://vimeo.com/"}
 
-  - name: Elsewhere
+  - name: Listen
     style: list
     links:
-      - name: Bandcamp
-        url: https://bandcamp.com/
-      - name: NTS Radio
-        url: https://www.nts.live/
-      - name: Letterboxd
-        url: https://letterboxd.com/
-      - name: Are.na
-        url: https://www.are.na/
-      - name: Radio Garden
-        url: https://radio.garden/
-      - name: xkcd
-        url: https://xkcd.com/
+      - {name: Spotify, url: "https://open.spotify.com/"}
+      - {name: Bandcamp, url: "https://bandcamp.com/"}
+      - {name: SoundCloud, url: "https://soundcloud.com/"}
+      - {name: Last.fm, url: "https://www.last.fm/"}
+      - {name: NTS Radio, url: "https://www.nts.live/"}
+
+  - name: Make
+    style: list
+    links:
+      - {name: Figma, url: "https://www.figma.com/"}
+      - {name: Excalidraw, url: "https://excalidraw.com/"}
+      - {name: Notion, url: "https://www.notion.so/"}
+      - {name: regex101, url: "https://regex101.com/"}
+      - {name: CyberChef, url: "https://gchq.github.io/CyberChef/"}
+      - {name: Wolfram Alpha, url: "https://www.wolframalpha.com/"}
+
+  - name: Talk
+    style: list
+    links:
+      - {name: Discord, url: "https://discord.com/app"}
+      - {name: Telegram, url: "https://web.telegram.org/"}
+      - {name: Mastodon, url: "https://mastodon.social/"}
+      - {name: LinkedIn, url: "https://www.linkedin.com/"}
+      - {name: Gmail, url: "https://mail.google.com/"}
+
+  - name: Life
+    style: list
+    links:
+      - {name: Maps, url: "https://www.google.com/maps"}
+      - {name: Booking, url: "https://www.booking.com/"}
+      - {name: Amazon, url: "https://www.amazon.com/"}
+      - {name: Steam, url: "https://store.steampowered.com/"}
+      - {name: Duolingo, url: "https://www.duolingo.com/"}
 
 # The demo invents the state a monitor would report; only the row that
 # carries the hypervisor numbers has to be named here.
