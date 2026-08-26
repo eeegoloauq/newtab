@@ -25,6 +25,8 @@ chrome.storage.local.get({ url: '', colour: '', picture: null }, function (local
 // there is nothing to see. Other extensions solve it the same way.
 function paint(colour, picture) {
   var root = document.documentElement;
+  // The stylesheet already painted this dark; anything here only makes
+  // it match the page more closely.
   if (/^#[0-9a-f]{6}$/i.test(colour || '')) {
     root.style.backgroundColor = colour;
   }
