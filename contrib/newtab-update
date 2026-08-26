@@ -16,6 +16,10 @@
 #   HEALTH_URL  URL that must answer after the restart
 #   BACKUP_DIR  where replaced binaries are kept (last 3)
 #
+# The config is validated with the new binary, so any variable the config
+# names has to be in the environment — the systemd unit next to this file
+# reads the same EnvironmentFile the service does.
+#
 # Usage: newtab-update [--tag vX.Y.Z] [--dry-run]
 set -eu
 
@@ -23,7 +27,11 @@ REPO=${REPO:-eeegoloauq/newtab}
 BIN=${BIN:-/usr/bin/newtab}
 CONFIG=${CONFIG:-/etc/newtab/config.yaml}
 SERVICE=${SERVICE:-newtab}
-HEALTH_URL=${HEALTH_URL:-http://127.0.0.1:5669/healthz}
+# Where to knock after the restart. Taken from the config's own listen
+# address unless it is set here: a page bound to a LAN address does not
+# answer on loopback, and an update that cannot check what it did is an
+# update that rolls back a working page.
+HEALTH_URL=${HEALTH_URL:-}
 BACKUP_DIR=${BACKUP_DIR:-/var/backups/newtab}
 HEALTH_TIMEOUT=${HEALTH_TIMEOUT:-30}
 RELEASES=${RELEASES:-https://github.com/$REPO/releases}
@@ -40,6 +48,18 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
+if [ -z "$HEALTH_URL" ]; then
+	listen=$(sed -n 's/^listen:[[:space:]]*"\{0,1\}\([^"#]*\)"\{0,1\}.*/\1/p' "$CONFIG" | head -1 | tr -d '[:space:]')
+	[ -n "$listen" ] || listen=127.0.0.1:5669
+	# A wildcard bind answers on loopback; a specific one may not.
+	case $listen in
+	0.0.0.0:*) listen=127.0.0.1:${listen#0.0.0.0:} ;;
+	:::*) listen=127.0.0.1:${listen#:::} ;;
+	:*) listen=127.0.0.1$listen ;;
+	esac
+	HEALTH_URL=http://$listen/healthz
+fi
+
 case $(uname -m) in
 x86_64) arch=amd64 ;;
 aarch64|arm64) arch=arm64 ;;
@@ -47,10 +67,15 @@ aarch64|arm64) arch=arm64 ;;
 esac
 asset=newtab-linux-$arch
 
+# wget rather than curl: a container or a trimmed server often has one and
+# not the other, and wget is the one busybox brings.
+fetch() { wget -q -O "$2" "$1"; }
+
 if [ -z "$tag" ]; then
-	# The redirect target of /releases/latest is the tag, which needs no
-	# API token and no JSON parser.
-	tag=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "$RELEASES/latest" | sed 's|.*/||')
+	# The tag comes out of the redirect /releases/latest performs, which
+	# costs no API quota and needs no JSON parser on the host.
+	tag=$(wget -q -S --spider --max-redirect=0 "$RELEASES/latest" 2>&1 |
+		sed -n 's|.*[Ll]ocation:.*/releases/tag/\([^ ]*\).*|\1|p' | tr -d '\r' | head -1)
 fi
 [ -n "$tag" ] || { echo "could not work out the latest tag" >&2; exit 1; }
 
@@ -63,8 +88,8 @@ echo "$have -> $tag"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-curl -fsSL -o "$tmp/$asset" "$RELEASES/download/$tag/$asset"
-curl -fsSL -o "$tmp/SHA256SUMS" "$RELEASES/download/$tag/SHA256SUMS"
+fetch "$RELEASES/download/$tag/$asset" "$tmp/$asset"
+fetch "$RELEASES/download/$tag/SHA256SUMS" "$tmp/SHA256SUMS"
 # Verify before the file is ever made executable.
 (cd "$tmp" && grep " $asset\$" SHA256SUMS | sha256sum -c -) >/dev/null
 chmod +x "$tmp/$asset"
@@ -82,7 +107,7 @@ systemctl restart "$SERVICE"
 
 waited=0
 while [ "$waited" -lt "$HEALTH_TIMEOUT" ]; do
-	if curl -fsS --max-time 2 "$HEALTH_URL" >/dev/null 2>&1; then
+	if wget -q -O /dev/null --timeout=2 "$HEALTH_URL" 2>/dev/null; then
 		echo "on $tag"
 		exit 0
 	fi

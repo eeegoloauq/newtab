@@ -5,4 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+# The same secrets the service itself reads: the update validates the
+# running config with the new binary, and a config that names a token
+# variable will not validate without it.
+EnvironmentFile=-/etc/newtab/newtab.env
 ExecStart=/usr/local/bin/newtab-update
