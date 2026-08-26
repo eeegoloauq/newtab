@@ -4,7 +4,6 @@
 (function () {
   var engine = document.body.dataset.engine;
   var q = document.getElementById('q');
-  var note = document.getElementById('note');
   var links = Array.prototype.slice.call(document.querySelectorAll('a[data-key]'));
   var sections = Array.prototype.slice.call(document.querySelectorAll('[data-sec]'));
   var hit = null;
@@ -33,12 +32,10 @@
       sections[j].classList.toggle('out', !sections[j].querySelector('li:not(.out), .card:not(.out)'));
     }
 
+    // The match Enter would open underlines itself. A line of prose
+    // explaining the keys was there and was removed: it said the same
+    // thing on every one of the thousand times the page is opened.
     if (hit) { hit.classList.add('hit'); }
-    // Say what Enter will do before it happens: opening the wrong thing
-    // is the only way this page can waste your time.
-    note.textContent = t === '' ? ''
-      : hit ? 'Enter \u2192 ' + hit.dataset.name
-      : 'Enter \u2192 \u043f\u043e\u0438\u0441\u043a \u00ab' + term.trim() + '\u00bb';
   }
 
   q.addEventListener('input', function () { apply(q.value); });

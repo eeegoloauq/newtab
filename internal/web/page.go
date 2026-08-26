@@ -28,6 +28,8 @@ var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
 type pageView struct {
 	Title    string
+	Lang     string
+	Text     config.Text
 	Engine   string
 	CSS      template.CSS
 	JS       template.JS
@@ -73,6 +75,8 @@ type linkView struct {
 func render(c *config.Config) ([]byte, error) {
 	v := pageView{
 		Title:  c.Title,
+		Lang:   c.Lang,
+		Text:   c.Text,
 		Engine: c.Search.Engine,
 		CSS:    template.CSS(pageCSS),
 		JS:     template.JS(pageJS),

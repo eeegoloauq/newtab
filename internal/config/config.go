@@ -28,11 +28,29 @@ const (
 type Config struct {
 	Title  string `yaml:"title"`
 	Listen string `yaml:"listen"`
-	// IconDir holds icons fetched by `newtab icons`. Empty means the page
-	// draws monograms and never mentions an image.
-	IconDir  string    `yaml:"icon_dir"`
+	// IconDir holds icons fetched by `newtab icons`. Empty means every row
+	// draws the browser's globe and no image is ever requested.
+	IconDir string `yaml:"icon_dir"`
+	// Lang is the document language. It is what a screen reader switches
+	// its pronunciation on, so it belongs to the config that names the
+	// links, not to the code.
+	Lang string `yaml:"lang"`
+	// Text holds the few strings the page shows that are not a link name.
+	// There is no translation framework and there should not be one for
+	// four strings: the operator writes them in their own language, and
+	// the defaults are English.
+	Text Text `yaml:"text"`
 	Search   Search    `yaml:"search"`
 	Sections []Section `yaml:"sections"`
+}
+
+// Text is every user-visible string that does not come from the links.
+// Keeping them here rather than in the template is what makes the page
+// translatable at all — the binary ships no natural language.
+type Text struct {
+	// Search labels the input for a screen reader. Nothing on screen
+	// shows it: the field is where the caret already is.
+	Search string `yaml:"search"`
 }
 
 type Search struct {
@@ -55,11 +73,14 @@ type Link struct {
 	// wrong or ambiguous. Empty means "match by host, or no dot at all".
 	Check string `yaml:"check"`
 	// Alias adds words the filter should match besides the name, for the
-	// links whose name is not what you type ("почта" for Gmail).
+	// links whose name is not what you type ("mail" for Gmail), including
+	// the operator's own language.
 	Alias []string `yaml:"alias"`
 }
 
 const (
+	defaultLang   = "en"
+	defaultSearch = "Filter links, or search the web"
 	defaultTitle  = "newtab"
 	defaultListen = "127.0.0.1:5669"
 	defaultEngine = "https://www.google.com/search?q=%s"
@@ -93,6 +114,12 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Search.Engine == "" {
 		c.Search.Engine = defaultEngine
+	}
+	if c.Lang == "" {
+		c.Lang = defaultLang
+	}
+	if c.Text.Search == "" {
+		c.Text.Search = defaultSearch
 	}
 	for i := range c.Sections {
 		if c.Sections[i].Style == "" {

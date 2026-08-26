@@ -12,6 +12,10 @@
   --dim: #9a9488;
   --head: #6f6a60;
   --line: #2c2924;
+  /* One step above the background — enough to read as a control, not
+     enough to become the subject of the page. */
+  --field: #1b1917;
+  --edge: #3f3b35;
   /* The only colour on the page, and it means one thing: this is down.
      A brand accent would compete with the links for attention and lose.
      The value is lookout's down red: the same state should be the same
@@ -27,7 +31,7 @@ body {
   max-width: 1160px;
   background: var(--bg);
   color: var(--ink);
-  font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font: 17px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -63,24 +67,28 @@ h2 {
   text-transform: uppercase;
 }
 
-/* No rule under it and no caption over it: the field is where the caret
-   already is when the page opens, and every line drawn around it was
-   furniture. The placeholder names both jobs it does. */
+/* A field, plainly: a shape you can aim at, held one step above the
+   background and no further. Everything that used to explain it — a
+   caption, a placeholder, a line of prose about which key does what —
+   is gone. It said the same thing on every one of the thousand times
+   this page opens, and the page has exactly one field. */
 #q {
   display: block;
-  width: 36ch;
+  width: 34ch;
   max-width: 100%;
-  padding: 2px 0;
-  border: 0;
-  background: none;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--field);
   color: var(--ink);
   font: inherit;
-  font-size: 18px;
+  font-size: 17px;
   outline: none;
 }
-#q::placeholder { color: var(--dim); }
-/* The caret says where focus is. Nothing else has to. */
-#q:focus::placeholder { color: var(--head); }
+/* Focus is a slightly clearer edge, not a colour: the field is already
+   focused when the page opens, so a bright ring would be the first thing
+   the eye lands on, every time. */
+#q:focus { border-color: var(--edge); }
 
 .note {
   margin: 6px 0 0;
@@ -106,7 +114,7 @@ li { line-height: 1.9; }
    confetti. */
 li a {
   display: grid;
-  grid-template-columns: 18px max-content minmax(0, 1fr);
+  grid-template-columns: 20px max-content minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   /* The links are what you came to read, so they are the brightest thing
@@ -123,9 +131,9 @@ li a:hover .name { text-decoration: underline; text-underline-offset: 3px; }
 /* --- the parts of a row --------------------------------------------- */
 /* Icons stay in colour. At this size a logo is recognised by its colour,
    rather than by its shape — greyscale would make them uniform and
-   useless at once. 18px against 16px text: big enough to read, small
-   enough that the page stays an index and not a launcher. */
-.ico { width: 18px; height: 18px; object-fit: contain; }
+   useless at once. 20px against 17px text: the largest that still reads
+   as an index rather than a launcher, checked against a full page. */
+.ico { width: 20px; height: 20px; object-fit: contain; }
 
 /* What a browser draws for a page with no favicon. A monogram was the
    other option and it is worse: 47 different letters are noisier than 47
