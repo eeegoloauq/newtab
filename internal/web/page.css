@@ -27,9 +27,16 @@
 
 * { box-sizing: border-box; }
 
+/* The block sits in the middle of the window when it fits, and at the
+   top when it does not: safe centring is what keeps a long page from
+   being clipped at its start. Nobody looks at the top edge of a screen. */
 body {
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 7vh 32px 64px;
+  padding: 40px 32px;
   max-width: 1160px;
   background: var(--bg);
   color: var(--ink);
@@ -218,7 +225,9 @@ svg.ico { color: var(--head); }
 a:focus-visible { outline: 1px solid var(--dim); outline-offset: 3px; }
 
 @media (max-width: 640px) {
-  body { padding: 4vh 18px 48px; }
+  /* On a phone the page is taller than the screen anyway, and starting
+     under the fold would only mean scrolling up. */
+  body { justify-content: flex-start; padding: 24px 18px 48px; }
   main { gap: 0 20px; }
   .col { flex-basis: 140px; }
   /* A 32px row is below the floor for a finger, and the neighbour is one

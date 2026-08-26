@@ -32,6 +32,17 @@ sections:
         alias: [hn]          # also matches when you type this
 ```
 
+```yaml
+search:
+  engine: https://duckduckgo.com/?q=%s
+  prefixes:                                  # "w cheese" goes to Wikipedia
+    w: https://en.wikipedia.org/w/index.php?search=%s
+    gh: https://github.com/search?q=%s
+```
+
+Anything that looks like an address — `example.com`, `198.51.100.20:5001` — opens
+instead of being searched for.
+
 `style: list` is bookmarks; `style: live` is things that can be down, and those
 rows can show state. Full example: [config.example.yaml](config.example.yaml).
 

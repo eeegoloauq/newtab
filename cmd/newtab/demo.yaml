@@ -8,6 +8,10 @@ columns: 4
 
 search:
   engine: https://duckduckgo.com/?q=%s
+  prefixes:
+    g: https://www.google.com/search?q=%s
+    w: https://en.wikipedia.org/w/index.php?search=%s
+    gh: https://github.com/search?q=%s
 
 sections:
   - name: Home

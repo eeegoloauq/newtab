@@ -188,6 +188,9 @@ type Search struct {
 	// rather than a provider name so switching engines never needs a code
 	// change.
 	Engine string `yaml:"engine"`
+	// Prefixes send a query somewhere else when it starts with the key
+	// and a space: "w cheese" to Wikipedia. Same %s rule as Engine.
+	Prefixes map[string]string `yaml:"prefixes"`
 }
 
 type Section struct {
@@ -391,6 +394,17 @@ func (c *Config) validate() error {
 			if _, err := time.ParseDuration(c.Proxmox.Every); err != nil {
 				return fmt.Errorf("proxmox.every %q is not a duration like 30s", c.Proxmox.Every)
 			}
+		}
+	}
+	for key, engine := range c.Search.Prefixes {
+		if key == "" || strings.ContainsAny(key, " \t") {
+			return fmt.Errorf("search.prefixes: %q is not a word you can type before a space", key)
+		}
+		if !strings.Contains(engine, "%s") {
+			return fmt.Errorf("search.prefixes[%s] %q has no %%s for the query", key, engine)
+		}
+		if u, err := url.Parse(engine); err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("search.prefixes[%s] %q is not an http(s) URL", key, engine)
 		}
 	}
 	// A typo here is a service that will not start; catching it in

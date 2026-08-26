@@ -48,7 +48,9 @@ func TestFetchReadsTheCurrentBlock(t *testing.T) {
 	if n.Temperature != 12 || n.Sky != Rain || !n.Night || !n.OK {
 		t.Fatalf("now = %+v", n)
 	}
-	if gotQuery == "" || !contains(gotQuery, "latitude=59.9386") {
+	// Coordinates are rounded before they leave: the service has no
+	// business knowing which building asked.
+	if gotQuery == "" || !contains(gotQuery, "latitude=59.94") {
 		t.Fatalf("query = %q", gotQuery)
 	}
 }

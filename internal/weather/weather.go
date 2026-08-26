@@ -87,9 +87,12 @@ type document struct {
 }
 
 func (p *Poller) fetch(ctx context.Context, client *http.Client) (Now, error) {
+	// Two decimals is about a kilometre, which is as much as weather
+	// knows and rather less than the service needs to know about where
+	// its caller lives.
 	q := url.Values{
-		"latitude":  {strconv.FormatFloat(p.Latitude, 'f', 4, 64)},
-		"longitude": {strconv.FormatFloat(p.Longitude, 'f', 4, 64)},
+		"latitude":  {strconv.FormatFloat(p.Latitude, 'f', 2, 64)},
+		"longitude": {strconv.FormatFloat(p.Longitude, 'f', 2, 64)},
 		"current":   {"temperature_2m,weather_code,is_day"},
 		"timezone":  {"auto"},
 	}

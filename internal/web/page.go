@@ -6,6 +6,7 @@ package web
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/url"
@@ -43,6 +44,9 @@ type pageView struct {
 	// a manifest and an icon fetched by path mean nothing inside an
 	// extension or a saved file.
 	Standalone bool
+	// Prefixes is the prefix table as JSON, for the one line of script
+	// that reads it.
+	Prefixes string
 	// ScriptSrc names an external script instead of inlining it. Browser
 	// extension pages forbid inline scripts, and that is the only place
 	// this is used.
@@ -152,6 +156,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		CSS:        template.CSS(pageCSS),
 		JS:         template.JS(pageJS),
 		Theme:      template.CSS(themeCSS(c.Theme)),
+		Prefixes:   prefixJSON(c.Search.Prefixes),
 	}
 	// A page built as a file has no server behind it to have polled
 	// anything, so it carries no weather.
@@ -270,6 +275,19 @@ func compact(d time.Duration) string {
 		return strconv.Itoa(int(d.Hours())) + "h"
 	}
 	return strconv.Itoa(int(d.Hours()/24)) + "d"
+}
+
+// prefixJSON is the prefix table the browser reads. Marshalling it here
+// rather than writing it into the script keeps the script a constant.
+func prefixJSON(prefixes map[string]string) string {
+	if len(prefixes) == 0 {
+		return ""
+	}
+	body, err := json.Marshal(prefixes)
+	if err != nil {
+		return ""
+	}
+	return string(body)
 }
 
 // themeCSS turns the config's overrides into custom properties. Every
