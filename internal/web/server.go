@@ -64,12 +64,21 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 	// a colour and an icon, or it invents all three from a screenshot.
 	if c.Theme.Image != "" {
 		path := c.Theme.Image
-		mux.HandleFunc("GET /background", func(w http.ResponseWriter, r *http.Request) {
-			// One file from the config, not a directory: there is no path
-			// to traverse.
-			w.Header().Set("Cache-Control", "public, max-age=86400")
+		serve := func(w http.ResponseWriter, r *http.Request) {
+			// One file named in the config, not a directory: there is no
+			// path to traverse.
+			//
+			// The address carries the file's digest, so the answer can
+			// never go stale and the browser is told to keep it for a
+			// year. Fetching a background again on every new tab is what
+			// made it appear a moment after the page.
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 			http.ServeFile(w, r, path)
-		})
+		}
+		mux.HandleFunc("GET /background/{sum}", serve)
+		// The plain name stays for a page rendered before the digest was
+		// known, and for anyone who bookmarked it.
+		mux.HandleFunc("GET /background", serve)
 	}
 	mux.HandleFunc("GET /manifest.webmanifest", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/manifest+json")

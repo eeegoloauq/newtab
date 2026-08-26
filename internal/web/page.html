@@ -15,7 +15,7 @@
 <title>{{.Title}}</title>
 <style>{{.CSS}}</style>
 {{if .Theme}}<style>{{.Theme}}</style>{{end}}
-{{if .Background}}<link rel="preload" as="image" href="/background">{{end}}
+{{if .Background}}<link rel="preload" as="image" href="{{.Background}}">{{end}}
 </head>
 <body data-engine="{{.Engine}}" data-opens="{{.Text.Opens}}" data-web="{{.Text.WebSearch}}"{{if .Prefixes}} data-prefixes="{{.Prefixes}}"{{end}}>
 <!-- Both glyphs the page draws itself, defined once. They come first:

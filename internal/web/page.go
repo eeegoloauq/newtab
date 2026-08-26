@@ -56,9 +56,10 @@ type pageView struct {
 	// Getting it wrong is a black flash on a light page and a white one
 	// on a dark page, and it is decided by one word in the head.
 	Scheme string
-	// Background says a picture is behind the page, so the head can ask
-	// for it early.
-	Background bool
+	// Background is the address of the picture behind the page, so the
+	// head can ask for it before the stylesheet is parsed. Empty when
+	// there is none, or when the page carries it inside itself.
+	Background string
 	// Standalone drops the links a served page has and a file cannot use:
 	// a manifest and an icon fetched by path mean nothing inside an
 	// extension or a saved file.
@@ -182,9 +183,9 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Engine:     c.Search.Engine,
 		CSS:        template.CSS(pageCSS),
 		JS:         template.JS(pageJS),
-		Theme:      template.CSS(themeCSS(c.Theme, c.Placeholder, c.Average, inline)),
+		Theme:      template.CSS(themeCSS(c.Theme, c.Fingerprint, c.Average, inline)),
 		Favicon:    faviconHref(inline),
-		Background: c.Theme.Image != "" && !inline,
+		Background: backgroundHref(c, inline),
 		Scheme:     scheme(c.Theme.Background),
 		Prefixes:   prefixJSON(c.Search.Prefixes),
 	}
@@ -342,6 +343,25 @@ func dataURI(path string) (string, error) {
 	return "data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(body), nil
 }
 
+// backgroundPath is where the picture lives: its name carries the
+// digest, so a changed picture is a changed URL and an unchanged one is
+// never asked about twice.
+func backgroundPath(fingerprint string) string {
+	if fingerprint == "" {
+		return "/background"
+	}
+	// A segment, not a suffix: the router's patterns take a wildcard
+	// only as a whole segment.
+	return "/background/" + fingerprint
+}
+
+func backgroundHref(c *config.Config, inline bool) string {
+	if c.Theme.Image == "" || inline {
+		return ""
+	}
+	return backgroundPath(c.Fingerprint)
+}
+
 // darken multiplies a hex colour towards black, the way the shade layer
 // does to the picture.
 func darken(hex string, dim float64) string {
@@ -381,7 +401,7 @@ func faviconHref(inline bool) template.URL {
 // themeCSS turns the config's overrides into custom properties. Every
 // value here was checked by the config: colours are hex, sizes are in
 // range, and nothing else reaches this string.
-func themeCSS(t config.Theme, placeholder, average string, inline bool) string {
+func themeCSS(t config.Theme, fingerprint, average string, inline bool) string {
 	var b strings.Builder
 	b.WriteString(":root{")
 	for prop, value := range map[string]string{
@@ -408,17 +428,19 @@ func themeCSS(t config.Theme, placeholder, average string, inline bool) string {
 		// Two layers: the picture, and underneath it the same picture at
 		// the size of a stamp, embedded in this stylesheet. The stamp is
 		// there for the moment before the real one has arrived.
-		layers := "url(/background)"
+		// The picture is behind a URL that names its contents, so the
+		// browser may keep it for a year and a new tab paints it from
+		// disk rather than fetching it again. A page that opens dozens
+		// of times a day cannot afford a network round trip for its
+		// background, and the round trip — not the file size — was what
+		// showed as a flash.
+		layers := "url(" + backgroundPath(fingerprint) + ")"
 		if inline {
-			// A file has no server to fetch /background from, so the
-			// picture travels inside it or not at all.
+			// A file has no server to fetch it from, so the picture
+			// travels inside the file or not at all.
 			if data, err := dataURI(t.Image); err == nil {
 				layers = "url(" + data + ")"
-			} else if placeholder != "" {
-				layers = "url(" + placeholder + ")"
 			}
-		} else if placeholder != "" {
-			layers += ",url(" + placeholder + ")"
 		}
 		// The mean colour of the picture, darkened by the same amount as
 		// the picture: whatever paints first is then already the right
