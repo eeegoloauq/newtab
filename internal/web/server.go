@@ -1,6 +1,8 @@
 package web
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -41,11 +43,44 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("GET /icon/{slug}", iconHandler(c.IconDir))
+	// A phone that is told to add this to the home screen needs a name,
+	// a colour and an icon, or it invents all three from a screenshot.
+	mux.HandleFunc("GET /manifest.webmanifest", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/manifest+json")
+		w.Write(manifest(c))
+	})
+	for _, size := range []int{192, 512} {
+		body := AppIcon(size)
+		mux.HandleFunc(fmt.Sprintf("GET /app-%d.png", size), func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Cache-Control", "public, max-age=604800")
+			w.Write(body)
+		})
+	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Write([]byte("ok\n"))
 	})
 	return mux
+}
+
+// manifest is the web app manifest, built from the config so the name on
+// a home screen is the name in the config.
+func manifest(c *config.Config) []byte {
+	doc := map[string]any{
+		"name":             c.Title,
+		"short_name":       c.Title,
+		"start_url":        "/",
+		"display":          "standalone",
+		"background_color": "#141312",
+		"theme_color":      "#141312",
+		"icons": []map[string]any{
+			{"src": "/app-192.png", "sizes": "192x192", "type": "image/png"},
+			{"src": "/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+		},
+	}
+	body, _ := json.Marshal(doc)
+	return body
 }
 
 // iconHandler serves one stored icon. The page only links to icons that

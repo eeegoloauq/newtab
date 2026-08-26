@@ -32,6 +32,10 @@ var pageJS string
 var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
 type pageView struct {
+	// Standalone drops the links a served page has and a file cannot use:
+	// a manifest and an icon fetched by path mean nothing inside an
+	// extension or a saved file.
+	Standalone bool
 	// ScriptSrc names an external script instead of inlining it. Browser
 	// extension pages forbid inline scripts, and that is the only place
 	// this is used.
@@ -124,13 +128,14 @@ func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stat
 
 func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats, script string) ([]byte, error) {
 	v := pageView{
-		ScriptSrc: script,
-		Title:     c.Title,
-		Lang:      c.Lang,
-		Text:      c.Text,
-		Engine:    c.Search.Engine,
-		CSS:       template.CSS(pageCSS),
-		JS:        template.JS(pageJS),
+		Standalone: inline,
+		ScriptSrc:  script,
+		Title:      c.Title,
+		Lang:       c.Lang,
+		Text:       c.Text,
+		Engine:     c.Search.Engine,
+		CSS:        template.CSS(pageCSS),
+		JS:         template.JS(pageJS),
 	}
 	store := icons.Store{Dir: c.IconDir}
 	var flat []sectionView
@@ -188,7 +193,7 @@ func state(snap status.Snapshot, l config.Link, text config.Text, policy string)
 		return strings.TrimSpace(text.Down + " " + compact(check.Down)), true
 	}
 	switch policy {
-	case config.TailQuiet:
+	case config.TailNever:
 		return "", false
 	case config.TailLatency:
 		if check.LatencyMS > 0 {
@@ -202,8 +207,7 @@ func state(snap status.Snapshot, l config.Link, text config.Text, policy string)
 	case config.TailUptime7d:
 		return percent(check.Uptime7d) + " 7d", false
 	}
-	// Exceptions, the default: a row that has been up all day says
-	// nothing. A number that reads 100% every day is furniture, and the
+	// Problems, the default: a row that has been up all day says nothing. A number that reads 100% every day is furniture, and the
 	// eye stops seeing the one day it does not.
 	if check.Uptime24h > 0 && check.Uptime24h < 1 {
 		return percent(check.Uptime24h) + " 24h", false

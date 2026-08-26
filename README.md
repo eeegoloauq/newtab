@@ -36,6 +36,24 @@ sections:
 `style: list` is bookmarks. `style: live` is for things that can be down — those
 rows can show state, see below. Full example: [config.example.yaml](config.example.yaml).
 
+## Making it your start page
+
+**Chrome, Edge, desktop.** Settings → On startup → Open a specific page, and
+Appearance → Show home button → enter the address. That covers the button and
+every launch; the new tab page itself can only be replaced by an extension, see
+below.
+
+**Firefox, desktop.** Settings → Home → Homepage and new windows → Custom URLs.
+Firefox also lets you set the new tab there, without an extension.
+
+**Android.** Chrome → Settings → Homepage → enter the address; the home button
+then opens it. Or open the page and use ⋮ → Add to Home screen: it installs as
+an app, full screen, with its own icon.
+
+**iPhone.** Safari cannot be told to open a URL as its start page. Open the page
+and use Share → Add to Home Screen — same result: an icon that opens it full
+screen.
+
 ## As a new tab
 
 Chrome and Firefox only let an extension replace the new tab page, so newtab
@@ -58,13 +76,18 @@ setting at it.
 status:
   url: http://monitor.example/api/status
   every: 30s
-  tail: exceptions
+  tail: problems
 ```
 
 Rows match checks by the host they point at, or by `check:` on the link. A row
-that is down says so and for how long. A healthy row shows what `tail` says:
-`exceptions` (default: nothing until the last day was less than perfect),
-`latency`, `uptime24h`, `uptime7d`, `quiet`.
+that is down says so and for how long. A healthy row shows whatever `tail` says:
+
+| `tail` | a healthy row shows |
+|---|---|
+| `problems` (default) | nothing, until the last day was less than perfect — then `99.8% 24h` |
+| `latency` | the last probe, `23 ms` |
+| `uptime24h`, `uptime7d` | that figure, always |
+| `never` | nothing, ever |
 
 Written for [lookout](https://github.com/eeegoloauq/lookout), but it only reads
 this much, so anything can serve it:

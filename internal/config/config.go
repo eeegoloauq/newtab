@@ -116,14 +116,17 @@ type Status struct {
 }
 
 // What a healthy row may show.
+// The names say what the row shows, because the operator reads them once
+// a year. "exceptions" and "quiet" were the first names and neither said
+// anything: one sounded like error handling, the other like muting.
 const (
-	// TailExceptions: nothing while the last day was perfect, the uptime
+	// TailProblems: nothing while the last day was perfect, the uptime
 	// figure once it was not.
-	TailExceptions = "exceptions"
-	TailLatency    = "latency"
-	TailUptime24h  = "uptime24h"
-	TailUptime7d   = "uptime7d"
-	TailQuiet      = "quiet"
+	TailProblems  = "problems"
+	TailLatency   = "latency"
+	TailUptime24h = "uptime24h"
+	TailUptime7d  = "uptime7d"
+	TailNever     = "never"
 )
 
 // PollEvery is Every parsed, or 30s.
@@ -233,7 +236,7 @@ func (c *Config) applyDefaults() {
 		c.Text.Memory = defaultMemory
 	}
 	if c.Status.Tail == "" {
-		c.Status.Tail = TailExceptions
+		c.Status.Tail = TailProblems
 	}
 	for i := range c.Sections {
 		if c.Sections[i].Style == "" {
@@ -268,10 +271,10 @@ func (c *Config) validate() error {
 			return fmt.Errorf("status.url %q is not an http(s) URL", c.Status.URL)
 		}
 		switch c.Status.Tail {
-		case TailExceptions, TailLatency, TailUptime24h, TailUptime7d, TailQuiet:
+		case TailProblems, TailLatency, TailUptime24h, TailUptime7d, TailNever:
 		default:
 			return fmt.Errorf("status.tail %q: expected one of %s, %s, %s, %s, %s",
-				c.Status.Tail, TailExceptions, TailLatency, TailUptime24h, TailUptime7d, TailQuiet)
+				c.Status.Tail, TailProblems, TailLatency, TailUptime24h, TailUptime7d, TailNever)
 		}
 		if c.Status.Every != "" {
 			if _, err := time.ParseDuration(c.Status.Every); err != nil {

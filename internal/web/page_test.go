@@ -101,12 +101,12 @@ func TestExceptionsTailIsQuietUntilItIsNot(t *testing.T) {
 	link := config.Link{Name: "Music", URL: "https://music.example.com/", Check: "Music"}
 
 	perfect := status.Fixed(map[string]status.Check{"Music": {Up: true, LatencyMS: 23, Uptime24h: 1}})
-	if tail, _ := state(perfect, link, text, config.TailExceptions); tail != "" {
+	if tail, _ := state(perfect, link, text, config.TailProblems); tail != "" {
 		t.Fatalf("a perfect day said %q", tail)
 	}
 
 	dipped := status.Fixed(map[string]status.Check{"Music": {Up: true, LatencyMS: 23, Uptime24h: 0.9982}})
-	if tail, _ := state(dipped, link, text, config.TailExceptions); tail != "99.8% 24h" {
+	if tail, _ := state(dipped, link, text, config.TailProblems); tail != "99.8% 24h" {
 		t.Fatalf("tail = %q, want 99.8%% 24h", tail)
 	}
 

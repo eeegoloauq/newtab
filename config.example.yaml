@@ -96,9 +96,9 @@ sections:
 status:
   url: http://198.51.100.20:5665/api/status
   every: 30s
-  # exceptions: say nothing while the last day was perfect.
-  # Also: latency, uptime24h, uptime7d, quiet.
-  tail: exceptions
+  # problems: say nothing while the last day was perfect, show the uptime
+  # figure once it was not. Also: latency, uptime24h, uptime7d, never.
+  tail: problems
 
 # Optional. Three numbers from a hypervisor, on the row of the link that
 # is it. The token is read from the environment, never from this file.
