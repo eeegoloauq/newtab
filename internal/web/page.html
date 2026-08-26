@@ -8,17 +8,22 @@
 <title>{{.Title}}</title>
 <style>{{.CSS}}</style>
 </head>
-<body data-engine="{{.Engine}}">
+<body data-engine="{{.Engine}}" data-opens="{{.Text.Opens}}" data-web="{{.Text.WebSearch}}">
+<!-- Both glyphs the page draws itself, defined once. They come first:
+     a <use> placed before its target does not resolve in Chrome. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="glyph-find" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></symbol><symbol id="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 3.9 5.7 3.9 9s-1.3 6.3-3.9 9c-2.6-2.7-3.9-5.7-3.9-9S9.4 5.7 12 3z"/></symbol></svg>
 <form class="find" id="find" autocomplete="off">
   <label for="q" class="sr">{{.Text.Search}}</label>
-  <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false" autofocus>
+  <span class="box">
+    <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-find"/></svg>
+    <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false" autofocus
+           placeholder="{{.Text.Search}}">
+    <p class="sr" id="said" aria-live="polite"></p>
+  </span>
 </form>
 
-<!-- The icon a browser shows for a page with no favicon of its own. One
-     copy, referenced by every row that needs it. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 3.9 5.7 3.9 9s-1.3 6.3-3.9 9c-2.6-2.7-3.9-5.7-3.9-9S9.4 5.7 12 3z"/></symbol></svg>
-
 <main>
+{{range .Columns}}<div class="col">
 {{range $sec := .Sections}}
   <section class="sec{{if $sec.Live}} live{{end}}" data-sec>
     <h2>{{$sec.Name}}</h2>
@@ -33,6 +38,7 @@
     </ul>
   </section>
 {{end}}
+</div>{{end}}
 </main>
 
 <script>{{.JS}}</script>

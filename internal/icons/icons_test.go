@@ -31,7 +31,10 @@ func TestSlugKeepsCyrillicNamesApart(t *testing.T) {
 }
 
 func TestSlugOfSymbolsOnlyIsStable(t *testing.T) {
-	if Slug("!!!") == "" || Slug("!!!") != Slug("!!!") {
-		t.Fatal("a name of symbols must still get a stable, non-empty slug")
+	if got := Slug("!!!"); got != "e84c538e" {
+		t.Fatalf("Slug(%q) = %q: the digest must not drift, it names a file", "!!!", got)
+	}
+	if Slug("!!!") == Slug("???") {
+		t.Fatal("two symbol-only names collided")
 	}
 }

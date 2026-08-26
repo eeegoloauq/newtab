@@ -16,14 +16,24 @@ go build ./cmd/newtab
 ./newtab run config.example.yaml
 ```
 
-Sections come in two styles: `cards` for things that can be down (they get a
-tile and, later, a status dot), `list` for plain bookmarks. See
-[config.example.yaml](config.example.yaml).
+Sections come in two styles: `live` for things that can be down — their rows
+carry a status and a tail for a number — and `list` for plain bookmarks. Both
+are lists in the same columns. See [config.example.yaml](config.example.yaml).
+
+Icons are fetched once, from each site itself:
+
+```sh
+./newtab icons config.example.yaml     # writes into icon_dir
+./newtab render -inline config.yaml page.html   # one file, icons embedded
+```
+
+The page shows the browser's globe for a site that serves no icon, and a file
+dropped into `icon_dir` by hand always wins over the fetcher.
 
 ## Status
 
-Early. Statuses from [lookout](https://github.com/eeegoloauq/lookout) and cached
-icons are next.
+Early, and in daily use by its author. Statuses from
+[lookout](https://github.com/eeegoloauq/lookout) are next.
 
 ## License
 

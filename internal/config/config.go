@@ -8,6 +8,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -31,6 +32,11 @@ type Config struct {
 	// IconDir holds icons fetched by `newtab icons`. Empty means every row
 	// draws the browser's globe and no image is ever requested.
 	IconDir string `yaml:"icon_dir"`
+	// Columns is how many columns the sections are dealt into. The page
+	// splits them on the server rather than leaving it to CSS: CSS
+	// columns rebalance whenever content changes, so filtering threw
+	// sections sideways on every keystroke.
+	Columns int `yaml:"columns"`
 	// Lang is the document language. It is what a screen reader switches
 	// its pronunciation on, so it belongs to the config that names the
 	// links, not to the code.
@@ -48,9 +54,13 @@ type Config struct {
 // Keeping them here rather than in the template is what makes the page
 // translatable at all — the binary ships no natural language.
 type Text struct {
-	// Search labels the input for a screen reader. Nothing on screen
-	// shows it: the field is where the caret already is.
+	// Search labels the input and is its placeholder.
 	Search string `yaml:"search"`
+	// Opens and WebSearch are announced to a screen reader as the filter
+	// narrows: what Enter would open, or that it would go to the engine.
+	// A sighted reader sees the same thing as an underline.
+	Opens     string `yaml:"opens"`
+	WebSearch string `yaml:"web_search"`
 }
 
 type Search struct {
@@ -79,11 +89,14 @@ type Link struct {
 }
 
 const (
-	defaultLang   = "en"
-	defaultSearch = "Filter links, or search the web"
-	defaultTitle  = "newtab"
-	defaultListen = "127.0.0.1:5669"
-	defaultEngine = "https://www.google.com/search?q=%s"
+	defaultColumns   = 4
+	defaultLang      = "en"
+	defaultSearch    = "Search"
+	defaultOpens     = "Opens"
+	defaultWebSearch = "Search the web"
+	defaultTitle     = "newtab"
+	defaultListen    = "127.0.0.1:5669"
+	defaultEngine    = "https://www.google.com/search?q=%s"
 )
 
 // Load reads and validates the file. A Config it returns is safe to render.
@@ -115,11 +128,22 @@ func (c *Config) applyDefaults() {
 	if c.Search.Engine == "" {
 		c.Search.Engine = defaultEngine
 	}
+	if c.Columns == 0 {
+		c.Columns = defaultColumns
+	}
 	if c.Lang == "" {
 		c.Lang = defaultLang
 	}
+	// Every field needs a default: an empty string in the YAML would
+	// otherwise reach the page as an empty label.
 	if c.Text.Search == "" {
 		c.Text.Search = defaultSearch
+	}
+	if c.Text.Opens == "" {
+		c.Text.Opens = defaultOpens
+	}
+	if c.Text.WebSearch == "" {
+		c.Text.WebSearch = defaultWebSearch
 	}
 	for i := range c.Sections {
 		if c.Sections[i].Style == "" {
@@ -131,6 +155,28 @@ func (c *Config) applyDefaults() {
 func (c *Config) validate() error {
 	if !strings.Contains(c.Search.Engine, "%s") {
 		return fmt.Errorf("search.engine %q has no %%s for the query", c.Search.Engine)
+	}
+	// The engine goes straight into location.href. A javascript: engine
+	// in the config would be script running on the page.
+	if u, err := url.Parse(c.Search.Engine); err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("search.engine %q is not an http(s) URL", c.Search.Engine)
+	}
+	// A typo here is a service that will not start; catching it in
+	// validate is the whole point of the command.
+	if _, _, err := net.SplitHostPort(c.Listen); err != nil {
+		return fmt.Errorf("listen %q is not host:port", c.Listen)
+	}
+	// An icon_dir that does not exist is a page that silently has no
+	// icons, forever.
+	if c.IconDir != "" {
+		if info, err := os.Stat(c.IconDir); err != nil {
+			return fmt.Errorf("icon_dir %q: %w", c.IconDir, err)
+		} else if !info.IsDir() {
+			return fmt.Errorf("icon_dir %q is not a directory", c.IconDir)
+		}
+	}
+	if c.Columns < 1 || c.Columns > 8 {
+		return fmt.Errorf("columns is %d: expected 1 to 8", c.Columns)
 	}
 	if len(c.Sections) == 0 {
 		return fmt.Errorf("no sections: the page would be empty")

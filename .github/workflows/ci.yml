@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt'd:"; echo "$unformatted"; exit 1
+          fi
+      - run: go test -race ./...
+      - run: CGO_ENABLED=0 go build ./cmd/newtab
+      # The example config is the only documentation of the format, so it
+      # has to keep loading.
+      - name: validate the example config
+        run: go run ./cmd/newtab validate config.example.yaml
+      # A page that fails to render is not something to find out about in
+      # production, and rendering needs no server.
+      - name: render the example config
+        run: go run ./cmd/newtab render config.example.yaml /tmp/page.html

@@ -3,24 +3,22 @@
 // complete set of links, which is why the markup is not built here.
 (function () {
   var engine = document.body.dataset.engine;
+  var said = document.getElementById('said');
   var q = document.getElementById('q');
   var links = Array.prototype.slice.call(document.querySelectorAll('a[data-key]'));
   var sections = Array.prototype.slice.call(document.querySelectorAll('[data-sec]'));
   var hit = null;
 
-  // What gets hidden is the item, not the link: in a list that is the
-  // <li> (hiding only the <a> would leave its bullet space behind), on a
-  // card it is the card itself.
-  var items = links.map(function (a) {
-    return a.parentNode.tagName === 'LI' ? a.parentNode : a;
-  });
+  // What gets hidden is the row, not the link inside it: hiding only the
+  // anchor would leave the row's space behind.
+  var items = links.map(function (a) { return a.parentNode; });
 
   function apply(term) {
     var t = term.trim().toLowerCase();
     if (hit) { hit.classList.remove('hit'); hit = null; }
 
     for (var i = 0; i < links.length; i++) {
-      // No ranking: 43 links, and the config order is already the order
+      // No ranking: the config order is already the order
       // the operator thinks in, so the first match wins.
       var match = t === '' || links[i].dataset.key.indexOf(t) !== -1;
       items[i].classList.toggle('out', !match);
@@ -29,16 +27,40 @@
     // A section whose links are all filtered out would leave its heading
     // hanging over nothing.
     for (var j = 0; j < sections.length; j++) {
-      sections[j].classList.toggle('out', !sections[j].querySelector('li:not(.out), .card:not(.out)'));
+      sections[j].classList.toggle('out', !sections[j].querySelector('li:not(.out)'));
     }
 
-    // The match Enter would open underlines itself. A line of prose
-    // explaining the keys was there and was removed: it said the same
-    // thing on every one of the thousand times the page is opened.
+    // The match Enter would open underlines itself. The same fact goes
+    // to a screen reader, which cannot see an underline — out loud it is
+    // the only feedback there is.
     if (hit) { hit.classList.add('hit'); }
+    said.textContent = t === '' ? ''
+      : hit ? document.body.dataset.opens + ': ' + hit.dataset.name
+      : document.body.dataset.web;
   }
 
   q.addEventListener('input', function () { apply(q.value); });
+
+  // Coming back from a search restores the page as it was left: the old
+  // query still in the field and every link it did not match still
+  // hidden. That is a correct restore and a useless page, so the filter
+  // is cleared whenever the page is shown, restored from cache or not.
+  window.addEventListener('pageshow', function () {
+    if (q.value !== '') { q.value = ''; apply(''); }
+  });
+
+  // Arrow keys walk the matches. Without them the second match can only
+  // be reached by typing more letters at it.
+  function step(delta) {
+    var live = links.filter(function (a, i) { return !items[i].classList.contains('out'); });
+    if (live.length === 0) { return; }
+    var at = live.indexOf(hit);
+    var next = live[Math.min(Math.max(at + delta, 0), live.length - 1)] || live[0];
+    if (hit) { hit.classList.remove('hit'); }
+    hit = next;
+    hit.classList.add('hit');
+    said.textContent = document.body.dataset.opens + ': ' + hit.dataset.name;
+  }
 
   document.getElementById('find').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -53,12 +75,23 @@
   // Typing anywhere types into the field. Modified keys are left alone so
   // the browser's own shortcuts keep working.
   document.addEventListener('keydown', function (e) {
-    if (e.target === q) {
-      if (e.key === 'Escape') { q.value = ''; apply(''); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      step(e.key === 'ArrowDown' ? 1 : -1);
       return;
     }
+    // Escape clears from anywhere: after tabbing into the list the field
+    // is no longer focused, and that is exactly when you want out.
+    if (e.key === 'Escape') { q.value = ''; apply(''); q.focus(); return; }
+    if (e.target === q) { return; }
     if (e.ctrlKey || e.metaKey || e.altKey) { return; }
-    if (e.key.length === 1) { q.focus(); return; }
+    // Space scrolls the page. Every other printable key is the start of
+    // a query.
+    if (e.key.length === 1 && e.key !== ' ') { q.focus(); return; }
     if (e.key === 'Backspace') { e.preventDefault(); q.focus(); }
   });
+
+  // A phone opens the keyboard on an autofocused field and loses half
+  // the page to it. The attribute stays in the markup for the desktop.
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) { q.blur(); }
 })();

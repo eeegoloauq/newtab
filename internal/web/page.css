@@ -1,6 +1,6 @@
 /* A page of links, read like an index: one column flow, one type size,
-   no boxes. Tiles were tried and removed — they turned 47 links into a
-   launcher and made the page look assembled rather than written.
+   no boxes. Tiles were tried and removed — they turned a page of links
+   into a launcher and made it look assembled rather than written.
 
    Nothing here animates. This page opens dozens of times a day, so every
    transition would be a tax paid every time. */
@@ -10,12 +10,11 @@
   --bg: #141312;
   --ink: #e8e4da;
   --dim: #9a9488;
-  --head: #6f6a60;
+  /* 5.0:1 on the background. It was #6f6a60 and that is 3.45:1 — below
+     the floor for text this size, and these are the labels that tell one
+     group from another. */
+  --head: #8a8478;
   --line: #2c2924;
-  /* One step above the background — enough to read as a control, not
-     enough to become the subject of the page. */
-  --field: #1b1917;
-  --edge: #3f3b35;
   /* The only colour on the page, and it means one thing: this is down.
      A brand accent would compete with the links for attention and lose.
      The value is lookout's down red: the same state should be the same
@@ -57,14 +56,16 @@ body {
   white-space: nowrap;
 }
 
+/* Not the 11px uppercase micro-label with wide tracking: that thing sits
+   at the top of every generated admin panel and it is the first sign the
+   page was assembled rather than written. Same size as the links, one
+   step quieter, and it reads as a heading because of where it sits. */
 h2 {
   display: block;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--head);
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: .12em;
-  text-transform: uppercase;
 }
 
 /* A field, plainly: a shape you can aim at, held one step above the
@@ -72,14 +73,32 @@ h2 {
    caption, a placeholder, a line of prose about which key does what —
    is gone. It said the same thing on every one of the thousand times
    this page opens, and the page has exactly one field. */
-#q {
-  display: block;
+/* A line, not a filled box. A rounded panel is the only such shape on a
+   page built from rules and rows, so it pulls the eye by being foreign
+   rather than by being loud — and its border was 1.2:1 against its own
+   fill, which made it a grey slab with no visible edge. */
+.box {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 9px;
   width: 34ch;
   max-width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--field);
+  padding: 5px 2px 8px;
+  border-bottom: 1px solid var(--line);
+}
+/* Focus moves the only contour on the page. That is visible without
+   being a ring, and it clears 3:1 against the resting line. */
+.box:focus-within { border-bottom-color: var(--ink); }
+.box:focus-within .glyph { color: var(--dim); }
+
+.glyph { width: 18px; height: 18px; color: var(--head); }
+
+#q {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: none;
   color: var(--ink);
   font: inherit;
   font-size: 17px;
@@ -88,30 +107,34 @@ h2 {
 /* Focus is a slightly clearer edge, not a colour: the field is already
    focused when the page opens, so a bright ring would be the first thing
    the eye lands on, every time. */
-#q:focus { border-color: var(--edge); }
 
-.note {
-  margin: 6px 0 0;
-  min-height: 1.15em;
-  color: var(--head);
-  font-size: 12px;
-}
 
 /* --- the columns --------------------------------------------------- */
-main { column-width: 232px; column-gap: 40px; }
+/* A grid, not CSS columns. Multicol rebalances whenever the content
+   changes, so hiding a row while filtering threw whole sections into the
+   next column — the page jumped sideways under the eye on every
+   keystroke. A grid only lets a column get shorter. */
+main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 40px;
+  align-items: start;
+}
+
+.col { flex: 1 1 200px; min-width: 0; }
 
 .sec {
-  margin: 0 0 26px;
-  /* A heading in one column with its list in the next is unreadable. */
-  break-inside: avoid;
+  /* Groups are told apart by the gap between them, so it has to beat the
+     gap between rows by a clear margin, not by a hair. */
+  margin: 0 0 34px;
 }
 
 ul { margin: 0; padding: 0; list-style: none; }
-li { line-height: 1.9; }
+li { line-height: 2.05; }
 
 /* One grid for every row so the names line up down the whole page: the
-   straight left edge is what keeps 47 different favicons from reading as
-   confetti. */
+   straight left edge is what keeps a page of different favicons from
+   reading as confetti. */
 li a {
   display: grid;
   grid-template-columns: 20px max-content minmax(0, 1fr);
@@ -136,8 +159,9 @@ li a:hover .name { text-decoration: underline; text-underline-offset: 3px; }
 .ico { width: 20px; height: 20px; object-fit: contain; }
 
 /* What a browser draws for a page with no favicon. A monogram was the
-   other option and it is worse: 47 different letters are noisier than 47
-   different favicons, and a letter claims to mean something. */
+   other option and it is worse: a page of different letters is noisier
+   than a page of different favicons, and a letter claims to mean
+   something. */
 svg.ico { color: var(--head); }
 
 .name { white-space: nowrap; }
@@ -159,6 +183,8 @@ svg.ico { color: var(--head); }
   white-space: nowrap;
 }
 
+#q::placeholder { color: var(--head); }
+
 /* --- filtering ------------------------------------------------------ */
 .out { display: none; }
 
@@ -171,5 +197,9 @@ a:focus-visible { outline: 1px solid var(--dim); outline-offset: 3px; }
 
 @media (max-width: 640px) {
   body { padding: 4vh 18px 48px; }
-  main { column-width: auto; column-count: 1; }
+  main { gap: 0 20px; }
+  .col { flex-basis: 140px; }
+  /* A 32px row is below the floor for a finger, and the neighbour is one
+     line away. */
+  li { line-height: 2.6; }
 }

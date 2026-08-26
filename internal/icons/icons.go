@@ -31,6 +31,10 @@ import (
 // it is a mistake on the other end.
 const maxIcon = 256 << 10
 
+// maxCandidates is how many declared icons we will try before falling
+// back to the well-known paths.
+const maxCandidates = 8
+
 // browserUA is not decoration: a plain Go user agent gets a 403 from a
 // good share of the sites people actually bookmark.
 const browserUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"
@@ -54,7 +58,9 @@ func newClient() *http.Client {
 func browserHeaders(req *http.Request) {
 	req.Header.Set("User-Agent", browserUA)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,image/avif,image/webp,image/apng,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "ru-RU,ru;q=0.9,en;q=0.8")
+	// No language preference of our own: asking for one gets a localised
+	// page, and sometimes a localised icon.
+	req.Header.Set("Accept-Language", "*")
 	req.Header.Set("Sec-Fetch-Dest", "document")
 	req.Header.Set("Sec-Fetch-Mode", "navigate")
 	req.Header.Set("Sec-Fetch-Site", "none")
@@ -144,14 +150,29 @@ func (s Store) Fetch(ctx context.Context, name, pageURL string) (string, error) 
 			refused = append(refused, err.Error())
 			continue
 		}
-		// Remove the other extensions first: a site that moved from .ico
-		// to .svg would otherwise keep both and Path would pick either.
-		for _, old := range must(filepath.Glob(filepath.Join(s.Dir, Slug(name)+".*"))) {
-			os.Remove(old)
-		}
+		// Write first, delete after. Deleting first meant a flaky network
+		// on a -force run wiped a working icon and put nothing back.
 		out := filepath.Join(s.Dir, Slug(name)+ext)
-		if err := os.WriteFile(out, body, 0o644); err != nil {
+		tmp, err := os.CreateTemp(s.Dir, Slug(name)+".*.part")
+		if err != nil {
 			return "", err
+		}
+		if _, err := tmp.Write(body); err != nil {
+			tmp.Close()
+			os.Remove(tmp.Name())
+			return "", err
+		}
+		tmp.Close()
+		if err := os.Rename(tmp.Name(), out); err != nil {
+			os.Remove(tmp.Name())
+			return "", err
+		}
+		// A site that moved from .ico to .svg would otherwise keep both,
+		// and Path would pick whichever the glob returned first.
+		for _, old := range must(filepath.Glob(filepath.Join(s.Dir, Slug(name)+".*"))) {
+			if old != out {
+				os.Remove(old)
+			}
 		}
 		return out, nil
 	}
@@ -186,7 +207,10 @@ func candidates(ctx context.Context, client *http.Client, pageURL string) ([]str
 	if err != nil {
 		// Some CDNs drop a request carrying Sec-Fetch-* from a client
 		// they do not recognise. Ask once more as plainly as possible.
-		plain, _ := http.NewRequestWithContext(ctx, "GET", pageURL, nil)
+		plain, perr := http.NewRequestWithContext(ctx, "GET", pageURL, nil)
+		if perr != nil {
+			return wellKnown, nil
+		}
 		plain.Header.Set("User-Agent", browserUA)
 		resp, err = client.Do(plain)
 	}
@@ -201,6 +225,11 @@ func candidates(ctx context.Context, client *http.Client, pageURL string) ([]str
 	}
 	// resp.Request.URL, not base: follow where the redirects ended up.
 	found := declared(doc, resp.Request.URL)
+	// A page is free to declare a hundred icons. Trying them all would
+	// spend the whole run on one link.
+	if len(found) > maxCandidates {
+		found = found[:maxCandidates]
+	}
 	return append(found, wellKnown...), nil
 }
 
@@ -336,11 +365,18 @@ func decodeData(raw string) ([]byte, string, error) {
 		body, err = base64.StdEncoding.DecodeString(payload)
 	} else {
 		var unescaped string
-		unescaped, err = url.QueryUnescape(payload)
+		// PathUnescape, not QueryUnescape: the latter turns a literal
+		// plus into a space and corrupts the payload.
+		unescaped, err = url.PathUnescape(payload)
 		body = []byte(unescaped)
 	}
 	if err != nil || len(body) == 0 || len(body) > maxIcon {
 		return nil, "", fmt.Errorf("unusable data: URI")
+	}
+	// An inline icon gets the same scrutiny as a downloaded one: it also
+	// comes from someone else's page.
+	if !strings.HasPrefix(http.DetectContentType(body), "image/") && !isSVG(body) {
+		return nil, "", fmt.Errorf("data: URI is not an image")
 	}
 	return body, ext, nil
 }
@@ -360,6 +396,16 @@ var contentTypeByExt = map[string]string{
 func isSVG(body []byte) bool {
 	head := strings.ToLower(string(body[:min(len(body), 512)]))
 	return strings.Contains(head, "<svg")
+}
+
+// DataURI reads a stored icon and returns it as a data: URI, for the
+// single-file export.
+func DataURI(path string) (string, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return "data:" + ContentType(path) + ";base64," + base64.StdEncoding.EncodeToString(body), nil
 }
 
 // ContentType maps a stored file back to what it should be served as.

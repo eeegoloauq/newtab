@@ -58,6 +58,13 @@ func iconHandler(dir string) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", icons.ContentType(matches[0]))
+		// These bytes came from someone else's website. An SVG served
+		// from our own origin is a document, and opening /icon/x
+		// directly would run any script inside it here. The sandbox and
+		// the null default-src make that inert; nosniff stops a PNG that
+		// is really HTML from being treated as one.
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 		// The icon for a link changes when the site changes it and we
 		// re-fetch, which is a manual act. Until then it is the same
 		// bytes forever, and the browser should stop asking.
@@ -66,6 +73,12 @@ func iconHandler(dir string) http.HandlerFunc {
 	}
 }
 
-// Render returns the page as a file, for previewing a config without
-// running a server.
-func Render(c *config.Config) ([]byte, error) { return render(c) }
+// Render returns the page as a file. With inline set, the icons are
+// embedded in it and the result needs nothing else — no server, no
+// network, no icon directory.
+func Render(c *config.Config, inline bool) ([]byte, error) {
+	if inline {
+		return buildInline(c)
+	}
+	return render(c)
+}

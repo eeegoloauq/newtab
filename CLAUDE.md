@@ -6,8 +6,9 @@ step, no npm, one module (a YAML parser).
 ## Layout
 
 ```
-cmd/newtab      CLI: run, validate, render, version
+cmd/newtab      CLI: run, validate, render, icons, version
 internal/config YAML -> sections, and every validation error the operator gets
+internal/icons  fetching a site's own favicon, and the store it lands in
 internal/web    the page: template, CSS, JS, and the HTTP handlers
 ```
 
@@ -29,6 +30,20 @@ somewhere.
 No icon is fetched from a third party. Favicons through a search engine leak
 the whole link list to it; icons are served from here or not at all.
 
+`newtab icons` walks to every URL in the config, with a browser's user agent
+and with TLS verification off. Both are deliberate: sites behind a bot filter
+answer 403 to anything less, and half the boxes on a home LAN serve a
+self-signed certificate. It follows that stored icons are untrusted bytes, so
+`/icon/` serves them under `nosniff` and a sandbox CSP. Do not "fix" any of
+those three by removing them.
+
+The columns are dealt on the server. CSS multicol was tried and it rebalanced
+on every keystroke, throwing sections sideways while the filter ran.
+
+The page ships no natural language. Strings that are not a link name live in
+`text:` in the config, with English defaults in `applyDefaults` — add the
+default in the same change as the field.
+
 Comments say why, not what.
 
 ## Working on it
@@ -40,8 +55,12 @@ go run ./cmd/newtab render config.example.yaml /tmp/page.html
 go run ./cmd/newtab run config.example.yaml
 ```
 
-Tests must not name a real host or address — this repo will be public. Use
-`example.com`, `.example`, `.invalid`, `198.51.100.0/24`.
+Tests must not name a real host or address — this repo is public. Use
+`example.com`, `.example`, `.invalid`, `198.51.100.0/24`. Non-ASCII names in
+tests are data, not prose: they cover the slug path and should stay.
+
+What has been tried and thrown away is in [docs/design.md](docs/design.md).
+Read it before reintroducing tiles, monograms or a database.
 
 Commit messages are a sentence saying what changed and why, in English, present
 tense, no prefix tags.
