@@ -182,7 +182,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		Engine:     c.Search.Engine,
 		CSS:        template.CSS(pageCSS),
 		JS:         template.JS(pageJS),
-		Theme:      template.CSS(themeCSS(c.Theme, c.Placeholder, inline)),
+		Theme:      template.CSS(themeCSS(c.Theme, c.Placeholder, c.Average, inline)),
 		Favicon:    faviconHref(inline),
 		Background: c.Theme.Image != "" && !inline,
 		Scheme:     scheme(c.Theme.Background),
@@ -342,6 +342,17 @@ func dataURI(path string) (string, error) {
 	return "data:" + kind + ";base64," + base64.StdEncoding.EncodeToString(body), nil
 }
 
+// darken multiplies a hex colour towards black, the way the shade layer
+// does to the picture.
+func darken(hex string, dim float64) string {
+	var r, g, b int
+	if _, err := fmt.Sscanf(hex, "#%02x%02x%02x", &r, &g, &b); err != nil {
+		return hex
+	}
+	k := 1 - dim
+	return fmt.Sprintf("#%02x%02x%02x", int(float64(r)*k), int(float64(g)*k), int(float64(b)*k))
+}
+
 // scheme reads the configured background and says whether the page is a
 // dark one or a light one. Anything the config did not set is dark,
 // which is what the built-in palette is.
@@ -370,7 +381,7 @@ func faviconHref(inline bool) template.URL {
 // themeCSS turns the config's overrides into custom properties. Every
 // value here was checked by the config: colours are hex, sizes are in
 // range, and nothing else reaches this string.
-func themeCSS(t config.Theme, placeholder string, inline bool) string {
+func themeCSS(t config.Theme, placeholder, average string, inline bool) string {
 	var b strings.Builder
 	b.WriteString(":root{")
 	for prop, value := range map[string]string{
@@ -408,6 +419,12 @@ func themeCSS(t config.Theme, placeholder string, inline bool) string {
 			}
 		} else if placeholder != "" {
 			layers += ",url(" + placeholder + ")"
+		}
+		// The mean colour of the picture, darkened by the same amount as
+		// the picture: whatever paints first is then already the right
+		// sort of dark.
+		if average != "" {
+			fmt.Fprintf(&b, "html{background:%s;}", darken(average, t.ImageDim))
 		}
 		fmt.Fprintf(&b, "body{background-color:var(--shade);background-image:%s;"+
 			"background-size:cover;background-position:center;background-attachment:fixed;"+

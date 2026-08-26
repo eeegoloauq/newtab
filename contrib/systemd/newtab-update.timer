@@ -1,0 +1,12 @@
+[Unit]
+Description=Check for a newtab release once a day
+
+[Timer]
+OnCalendar=daily
+# Nothing here is urgent, and a thousand instances asking GitHub at
+# midnight is a thousand instances asking GitHub at midnight.
+RandomizedDelaySec=4h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

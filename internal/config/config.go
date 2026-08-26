@@ -37,9 +37,11 @@ type Config struct {
 	// Notes are things worth saying out loud that are not errors. The
 	// CLI prints them; nothing else reads them.
 	Notes []string `yaml:"-"`
-	// Placeholder is the background image shrunk to a data URI, computed
-	// once when the config is read. It is not a setting.
+	// Placeholder is the background image shrunk to a data URI, and
+	// Average its mean colour. Both are computed once when the config is
+	// read; neither is a setting.
 	Placeholder string `yaml:"-"`
+	Average     string `yaml:"-"`
 
 	Title  string `yaml:"title"`
 	Listen string `yaml:"listen"`
@@ -413,6 +415,9 @@ func (c *Config) validate() error {
 		// rather than a flat colour.
 		if uri, err := backdrop.Placeholder(c.Theme.Image); err == nil {
 			c.Placeholder = uri
+		}
+		if avg, err := backdrop.Average(c.Theme.Image); err == nil {
+			c.Average = avg
 		}
 		if want, err := backdrop.Recommend(c.Theme.Image); err == nil && c.Theme.ImageDim+0.02 < want {
 			c.Notes = append(c.Notes, fmt.Sprintf(

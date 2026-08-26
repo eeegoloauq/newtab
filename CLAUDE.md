@@ -72,6 +72,10 @@ default in the same change as the field.
 
 Comments say why, not what.
 
+An update must never leave a page that will not start: `contrib/newtab-update`
+validates the running config with the new binary before it replaces anything,
+and rolls back when `/healthz` goes quiet. Keep that order if you touch it.
+
 ## Working on it
 
 ```sh

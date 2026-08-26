@@ -208,6 +208,11 @@ systemctl enable --now newtab
 Then put a reverse proxy in front of it, or open the port to your LAN. Go is
 only needed if you build it yourself.
 
+To keep it current, [`contrib/newtab-update`](contrib/newtab-update) fetches the
+latest release, checks it against `SHA256SUMS`, makes the new binary load your
+config before replacing anything, and puts the old one back if the service does
+not answer afterwards. Its timer is in `contrib/systemd/`.
+
 ## Notes
 
 The page sends no referrer and loads nothing from anywhere but your own server.

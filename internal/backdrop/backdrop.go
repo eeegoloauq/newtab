@@ -80,6 +80,40 @@ func Recommend(path string) (float64, error) {
 	return dim, nil
 }
 
+// Average is the picture's mean colour as a CSS hex string. It is what
+// the page is painted with before anything has decoded: black behind a
+// photograph is a flash, the photograph's own average is not.
+func Average(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	if err != nil {
+		return "", err
+	}
+	b := img.Bounds()
+	step := b.Dx() / 64
+	if step < 1 {
+		step = 1
+	}
+	var rs, gs, bs, n uint64
+	for y := b.Min.Y; y < b.Max.Y; y += step {
+		for x := b.Min.X; x < b.Max.X; x += step {
+			r, g, bb, _ := img.At(x, y).RGBA()
+			rs += uint64(r >> 8)
+			gs += uint64(g >> 8)
+			bs += uint64(bb >> 8)
+			n++
+		}
+	}
+	if n == 0 {
+		return "", fmt.Errorf("%s: nothing to measure", path)
+	}
+	return fmt.Sprintf("#%02x%02x%02x", rs/n, gs/n, bs/n), nil
+}
+
 // Placeholder is the picture at the size of a postage stamp, as a data
 // URI. It goes underneath the real background so the first paint is the
 // picture, blurred, instead of a flat colour that jumps to a photograph

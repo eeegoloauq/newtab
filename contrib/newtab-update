@@ -1,0 +1,99 @@
+#!/bin/sh
+# Update a systemd-managed newtab to the latest published release.
+#
+# It refuses to leave a broken page behind: the downloaded binary is checked
+# against the release's SHA256SUMS, it has to load the running config before
+# anything is replaced, and it has to answer /healthz after the restart or the
+# previous binary goes back.
+#
+# Everything is overridable from the environment, so a second instance or a
+# fork needs no edit to this file:
+#
+#   REPO        GitHub owner/name to fetch releases from
+#   BIN         path of the installed binary
+#   CONFIG      config the new binary is validated against
+#   SERVICE     systemd unit to restart
+#   HEALTH_URL  URL that must answer after the restart
+#   BACKUP_DIR  where replaced binaries are kept (last 3)
+#
+# Usage: newtab-update [--tag vX.Y.Z] [--dry-run]
+set -eu
+
+REPO=${REPO:-eeegoloauq/newtab}
+BIN=${BIN:-/usr/bin/newtab}
+CONFIG=${CONFIG:-/etc/newtab/config.yaml}
+SERVICE=${SERVICE:-newtab}
+HEALTH_URL=${HEALTH_URL:-http://127.0.0.1:5669/healthz}
+BACKUP_DIR=${BACKUP_DIR:-/var/backups/newtab}
+HEALTH_TIMEOUT=${HEALTH_TIMEOUT:-30}
+RELEASES=${RELEASES:-https://github.com/$REPO/releases}
+
+dryrun=no
+tag=
+while [ $# -gt 0 ]; do
+	case $1 in
+	--dry-run) dryrun=yes ;;
+	--tag) shift; tag=${1:-} ;;
+	-h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+	*) echo "unknown argument: $1" >&2; exit 2 ;;
+	esac
+	shift
+done
+
+case $(uname -m) in
+x86_64) arch=amd64 ;;
+aarch64|arm64) arch=arm64 ;;
+*) echo "no release build for $(uname -m)" >&2; exit 1 ;;
+esac
+asset=newtab-linux-$arch
+
+if [ -z "$tag" ]; then
+	# The redirect target of /releases/latest is the tag, which needs no
+	# API token and no JSON parser.
+	tag=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "$RELEASES/latest" | sed 's|.*/||')
+fi
+[ -n "$tag" ] || { echo "could not work out the latest tag" >&2; exit 1; }
+
+have=$("$BIN" version 2>/dev/null || echo none)
+case "$have" in
+"$tag"*) echo "already on $tag"; exit 0 ;;
+esac
+echo "$have -> $tag"
+[ "$dryrun" = no ] || exit 0
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+curl -fsSL -o "$tmp/$asset" "$RELEASES/download/$tag/$asset"
+curl -fsSL -o "$tmp/SHA256SUMS" "$RELEASES/download/$tag/SHA256SUMS"
+# Verify before the file is ever made executable.
+(cd "$tmp" && grep " $asset\$" SHA256SUMS | sha256sum -c -) >/dev/null
+chmod +x "$tmp/$asset"
+
+# The new binary has to understand the running config. A page that will not
+# start is worse than a page one version old.
+"$tmp/$asset" validate "$CONFIG" >/dev/null
+
+mkdir -p "$BACKUP_DIR"
+cp -a "$BIN" "$BACKUP_DIR/newtab-$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
+ls -1t "$BACKUP_DIR"/newtab-* 2>/dev/null | tail -n +4 | xargs -r rm -f
+
+install -m 0755 "$tmp/$asset" "$BIN"
+systemctl restart "$SERVICE"
+
+waited=0
+while [ "$waited" -lt "$HEALTH_TIMEOUT" ]; do
+	if curl -fsS --max-time 2 "$HEALTH_URL" >/dev/null 2>&1; then
+		echo "on $tag"
+		exit 0
+	fi
+	sleep 1
+	waited=$((waited + 1))
+done
+
+previous=$(ls -1t "$BACKUP_DIR"/newtab-* 2>/dev/null | head -n 1 || true)
+if [ -n "$previous" ]; then
+	echo "no healthz after $HEALTH_TIMEOUT s, rolling back to $previous" >&2
+	install -m 0755 "$previous" "$BIN"
+	systemctl restart "$SERVICE"
+fi
+exit 1
