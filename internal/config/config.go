@@ -39,7 +39,7 @@ type Config struct {
 	// There is no translation framework and there should not be one for
 	// four strings: the operator writes them in their own language, and
 	// the defaults are English.
-	Text Text `yaml:"text"`
+	Text     Text      `yaml:"text"`
 	Search   Search    `yaml:"search"`
 	Sections []Section `yaml:"sections"`
 }
