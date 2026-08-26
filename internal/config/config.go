@@ -318,7 +318,10 @@ func (c *Config) applyDefaults() {
 		c.Text.Down = defaultDown
 	}
 	if c.Theme.ImageDim == 0 {
-		c.Theme.ImageDim = 0.72
+		// Measured, not guessed: on a photograph with bright fog in it,
+		// this is where the group headings clear 4.5:1. Lighter than
+		// this and they fall into the picture.
+		c.Theme.ImageDim = 0.75
 	}
 	if c.Text.Guests == "" {
 		c.Text.Guests = defaultGuests

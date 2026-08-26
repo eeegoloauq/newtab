@@ -331,9 +331,13 @@ func themeCSS(t config.Theme) string {
 		// unreadable.
 		b.WriteString("body{background:var(--shade) url(/background) center/cover fixed;background-blend-mode:darken;}")
 		// A photograph has bright patches wherever it likes, and the
-		// quiet inks disappear into them. A shadow under the text costs
-		// nothing and holds it up over anything.
-		b.WriteString("body{text-shadow:0 1px 2px rgba(0,0,0,.6);}")
+		// quiet inks disappear into them: measured over the bright part
+		// of a photograph, headings fell to 2.6:1 against 7.4:1 for the
+		// links. A shadow holds the text up, and the quietest inks are
+		// promoted one step — on a picture there is no such thing as a
+		// safely quiet grey.
+		b.WriteString("body{text-shadow:0 1px 2px rgba(0,0,0,.65);}")
+		b.WriteString("h2,.tail,.rates,.wx,.glyph,#q::placeholder{color:var(--dim);}")
 	}
 	return b.String()
 }

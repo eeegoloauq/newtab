@@ -64,7 +64,7 @@ theme:
 ```yaml
 theme:
   image: /var/lib/newtab/lofoten.jpg
-  image_dim: 0.62      # how much of it is shaded
+  image_dim: 0.75      # how much of it is shaded
 ```
 
 ![With a background](docs/looks/photo.png)

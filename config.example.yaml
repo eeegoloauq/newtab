@@ -117,7 +117,7 @@ theme:
   # down: "#ff6d63"
   # font_size: 17
   # image: /var/lib/newtab/dusk.png
-  # image_dim: 0.55
+  # image_dim: 0.75   # anything lighter and headings sink into the picture
 
 # Optional. What an uptime monitor knows, read-only. Rows match checks by
 # the host they point at, or by `check:` on the link.
