@@ -111,7 +111,7 @@ func build(c *config.Config, inline bool) ([]byte, error) {
 				if inline {
 					// An icon that cannot be read is not worth failing a
 					// whole page over: the row falls back to the globe.
-					if uri, err := icons.DataURI(store.Path(l.Name)); err == nil {
+					if uri, err := icons.DataURI(store.Icon(l.Name)); err == nil {
 						lv.Icon = template.URL(uri)
 					} else {
 						lv.Icon = ""

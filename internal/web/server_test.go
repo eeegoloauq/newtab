@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -54,16 +55,31 @@ func TestIndexIsHTMLAndUncached(t *testing.T) {
 // These bytes came from someone else's website. An SVG served from our
 // origin is a document; nosniff and the sandbox are what stop it running
 // here, and a week is how long the browser should stop asking.
+// tinyPNG is a 1x1 image: the smallest thing that sniffs as image/png.
+var tinyPNG = []byte{
+	0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a,
+	0x00, 0x00, 0x00, 0x0d, 'I', 'H', 'D', 'R',
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+	0x89, 0x00, 0x00, 0x00, 0x0a, 'I', 'D', 'A', 'T',
+	0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05,
+	0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00,
+	0x00, 0x00, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82,
+}
+
 func TestIconIsServedAsUntrustedBytes(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "git.png"), []byte("png-bytes"), 0o600); err != nil {
+	// Real bytes: the handler refuses to serve a file that does not sniff
+	// as an image, because a stored HTML error page named .png is how a
+	// site's 404 becomes a document on our own origin.
+	if err := os.WriteFile(filepath.Join(dir, "git.png"), tinyPNG, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	rec := get(t, New(testPage(t, dir)), "/icon/git")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.Bytes())
 	}
-	if rec.Body.String() != "png-bytes" {
+	if !bytes.Equal(rec.Body.Bytes(), tinyPNG) {
 		t.Errorf("body = %q", rec.Body.String())
 	}
 	if ct := rec.Header().Get("Content-Type"); ct != "image/png" {

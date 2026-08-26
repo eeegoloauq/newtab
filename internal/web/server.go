@@ -3,7 +3,6 @@ package web
 import (
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/eeegoloauq/newtab/internal/config"
 	"github.com/eeegoloauq/newtab/internal/icons"
@@ -47,17 +46,20 @@ func iconHandler(dir string) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		matches, err := filepath.Glob(filepath.Join(dir, slug+".*"))
-		if err != nil || len(matches) == 0 {
+		// Slug is idempotent, so a slug from the URL names the same file
+		// as a slug from a link name — and nothing else: the path
+		// separator does not survive it.
+		path := icons.Store{Dir: dir}.IconBySlug(slug)
+		if path == "" {
 			http.NotFound(w, r)
 			return
 		}
-		body, err := os.ReadFile(matches[0])
+		body, err := os.ReadFile(path)
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Content-Type", icons.ContentType(matches[0]))
+		w.Header().Set("Content-Type", icons.ContentType(path))
 		// These bytes came from someone else's website. An SVG served
 		// from our own origin is a document, and opening /icon/x
 		// directly would run any script inside it here. The sandbox and

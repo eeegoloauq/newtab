@@ -333,7 +333,9 @@ func TestFetchFallsBackToFaviconWhenThePageIsDown(t *testing.T) {
 			// what lets the test finish when it does.
 			<-r.Context().Done()
 		}))
-		store := Store{Dir: t.TempDir()}
+		// A short client timeout keeps this honest and fast: the real
+		// fifteen seconds would be thirty in this file alone.
+		store := Store{Dir: t.TempDir(), Timeout: 100 * time.Millisecond}
 		path, err := store.Fetch(context.Background(), "Git", srv.URL+"/")
 		if err != nil {
 			t.Fatal(err)
@@ -424,7 +426,10 @@ func TestFetchReplacesTheOldFileAndLeavesNoPartFiles(t *testing.T) {
 func TestFetchUsesABoundedClientTimeout(t *testing.T) {
 	// Guards the fallback test above: if the client ever lost its
 	// timeout, that hang would be the whole test run.
-	if newClient().Timeout != 15*time.Second {
-		t.Fatalf("client timeout = %s", newClient().Timeout)
+	if newClient(0).Timeout != defaultTimeout {
+		t.Fatalf("client timeout = %s", newClient(0).Timeout)
+	}
+	if newClient(time.Second).Timeout != time.Second {
+		t.Fatal("an explicit timeout must win")
 	}
 }

@@ -43,9 +43,12 @@ const browserUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, li
 // and half the boxes on a home LAN answer https with a self-signed cert —
 // verifying here would mean no icon for the hypervisor and the router
 // forever.
-func newClient() *http.Client {
+func newClient(timeout time.Duration) *http.Client {
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
 	return &http.Client{
-		Timeout: 15 * time.Second,
+		Timeout: timeout,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
@@ -84,6 +87,9 @@ var cyrillic = strings.NewReplacer(
 // slug must stay unique too, so a name that survives transliteration as
 // nothing gets a digest instead of an empty string.
 func Slug(name string) string {
+	if name == "" {
+		return ""
+	}
 	s := slugUnsafe.ReplaceAllString(cyrillic.Replace(strings.ToLower(name)), "-")
 	s = strings.Trim(s, "-")
 	if s == "" {
@@ -94,7 +100,15 @@ func Slug(name string) string {
 }
 
 // Store is a directory of fetched icons.
-type Store struct{ Dir string }
+type Store struct {
+	Dir string
+	// Timeout bounds one HTTP request. Zero means defaultTimeout; it is a
+	// field so a test can make a hang finish in milliseconds instead of
+	// holding the suite for the real fifteen seconds.
+	Timeout time.Duration
+}
+
+const defaultTimeout = 15 * time.Second
 
 // Path returns the stored file for a link, or "" if there is none. The
 // extension is unknown up front, so this globs.
@@ -109,15 +123,52 @@ func (s Store) Path(name string) string {
 	return matches[0]
 }
 
-// Valid reports whether the stored file is really an image. A file
-// written before the fetcher learned to sniff its downloads can be an
-// HTML error page with an .ico name, and it renders as a torn square
+// Icon returns the stored file to draw for a link, or "" if there is
+// none worth drawing. It checks every candidate rather than the first
+// the glob returns: a leftover HTML file named .ico sitting next to a
+// good .png would otherwise hide the good one.
+//
+// A file written before the fetcher learned to sniff its downloads can
+// be an error page with an image name, and it renders as a torn square
 // rather than as nothing — worse than having no icon at all.
-func (s Store) Valid(name string) bool {
-	path := s.Path(name)
-	if path == "" {
-		return false
+func (s Store) Icon(name string) string {
+	if s.Dir == "" || Slug(name) == "" {
+		return ""
 	}
+	matches, err := filepath.Glob(filepath.Join(s.Dir, Slug(name)+".*"))
+	if err != nil {
+		return ""
+	}
+	for _, m := range matches {
+		if isImageFile(m) {
+			return m
+		}
+	}
+	return ""
+}
+
+// IconBySlug is Icon for a slug that has already been derived, which is
+// what an HTTP path carries.
+func (s Store) IconBySlug(slug string) string {
+	if s.Dir == "" || slug == "" || Slug(slug) != slug {
+		return ""
+	}
+	matches, err := filepath.Glob(filepath.Join(s.Dir, slug+".*"))
+	if err != nil {
+		return ""
+	}
+	for _, m := range matches {
+		if isImageFile(m) {
+			return m
+		}
+	}
+	return ""
+}
+
+// Valid reports whether there is an icon worth drawing for this link.
+func (s Store) Valid(name string) bool { return s.Icon(name) != "" }
+
+func isImageFile(path string) bool {
 	f, err := os.Open(path)
 	if err != nil {
 		return false
@@ -126,7 +177,7 @@ func (s Store) Valid(name string) bool {
 	head := make([]byte, 512)
 	n, _ := f.Read(head)
 	head = head[:n]
-	return len(head) > 0 && (strings.HasPrefix(http.DetectContentType(head), "image/") || isSVG(head))
+	return n > 0 && (strings.HasPrefix(http.DetectContentType(head), "image/") || isSVG(head))
 }
 
 // Fetch downloads the icon for pageURL and writes it into the store.
@@ -136,7 +187,7 @@ func (s Store) Fetch(ctx context.Context, name, pageURL string) (string, error) 
 	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
 		return "", err
 	}
-	client := newClient()
+	client := newClient(s.Timeout)
 	candidates, err := candidates(ctx, client, pageURL)
 	if err != nil {
 		return "", err
@@ -219,6 +270,11 @@ func candidates(ctx context.Context, client *http.Client, pageURL string) ([]str
 		return wellKnown, nil
 	}
 	defer resp.Body.Close()
+	// A 500 body can still contain a <link rel=icon> from the site's
+	// error template, and that is not the icon of the page we asked for.
+	if resp.StatusCode != http.StatusOK {
+		return wellKnown, nil
+	}
 	doc, err := html.Parse(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {
 		return wellKnown, nil
