@@ -434,23 +434,33 @@ func themeCSS(t config.Theme, fingerprint, average string, inline bool) string {
 		// of times a day cannot afford a network round trip for its
 		// background, and the round trip — not the file size — was what
 		// showed as a flash.
-		layers := "url(" + backgroundPath(fingerprint) + ")"
+		src := backgroundPath(fingerprint)
 		if inline {
 			// A file has no server to fetch it from, so the picture
 			// travels inside the file or not at all.
 			if data, err := dataURI(t.Image); err == nil {
-				layers = "url(" + data + ")"
+				src = data
 			}
 		}
-		// The mean colour of the picture, darkened by the same amount as
-		// the picture: whatever paints first is then already the right
-		// sort of dark.
+		// On the root element, not on the body: the body is a column in
+		// the middle of the window, and a background on it stops where
+		// the column stops — which is exactly how it looked, a band of
+		// picture with flat colour either side.
+		//
+		// The shade is a flat gradient over the picture rather than a
+		// blend mode: two layers on one element, painted in the order
+		// they are written, nothing to reason about.
+		shade := fmt.Sprintf("rgba(0,0,0,%.2f)", t.ImageDim)
+		colour := "#000000"
 		if average != "" {
-			fmt.Fprintf(&b, "html{background:%s;}", darken(average, t.ImageDim))
+			// The picture's own mean colour, darkened the same amount,
+			// is what fills the canvas until the picture is decoded.
+			colour = darken(average, t.ImageDim)
 		}
-		fmt.Fprintf(&b, "body{background-color:var(--shade);background-image:%s;"+
-			"background-size:cover;background-position:center;background-attachment:fixed;"+
-			"background-blend-mode:darken;}", layers)
+		fmt.Fprintf(&b, "html{background-color:%s;"+
+			"background-image:linear-gradient(%s,%s),url(%s);"+
+			"background-size:cover;background-position:center;background-attachment:fixed;}"+
+			"body{background:none;}", colour, shade, shade, src)
 		// A photograph has bright patches wherever it likes, and the
 		// quiet inks disappear into them: measured over the bright part
 		// of a photograph, headings fell to 2.6:1 against 7.4:1 for the
