@@ -1,15 +1,33 @@
 var field = document.getElementById('url');
 var state = document.getElementById('state');
 var tryIt = document.getElementById('try');
+var colour = document.getElementById('colour');
+var colourState = document.getElementById('colourstate');
 
 // Local answers immediately and is what a new tab reads; sync is what
 // carries the address to your other machines.
-chrome.storage.local.get({ url: '' }, function (local) {
+chrome.storage.local.get({ url: '', colour: '' }, function (local) {
+  colour.value = local.colour;
   if (local.url) {
     show(local.url);
     return;
   }
-  chrome.storage.sync.get({ url: '' }, function (synced) { show(synced.url); });
+  chrome.storage.sync.get({ url: '', colour: '' }, function (synced) {
+    colour.value = synced.colour;
+    show(synced.url);
+  });
+});
+
+colour.addEventListener('input', function () {
+  var value = colour.value.trim();
+  if (value !== '' && !/^#[0-9a-f]{6}$/i.test(value)) {
+    colourState.textContent = 'six hex digits, like #141312';
+    return;
+  }
+  chrome.storage.local.set({ colour: value });
+  chrome.storage.sync.set({ colour: value }, function () {
+    colourState.textContent = value === '' ? 'browser default' : 'saved';
+  });
 });
 
 function show(url) {

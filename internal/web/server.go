@@ -102,13 +102,23 @@ func New(c *config.Config, snapshot func() status.Snapshot, stats func() proxmox
 // manifest is the web app manifest, built from the config so the name on
 // a home screen is the name in the config.
 func manifest(c *config.Config) []byte {
+	// The colour a browser paints before the page has drawn anything:
+	// the theme's own background, or the picture's mean colour when
+	// there is a picture, so the wait is the same colour as the page.
+	colour := c.Theme.Background
+	if colour == "" {
+		colour = "#141312"
+	}
+	if c.Average != "" {
+		colour = darken(c.Average, c.Theme.ImageDim)
+	}
 	doc := map[string]any{
 		"name":             c.Title,
 		"short_name":       c.Title,
 		"start_url":        "/",
 		"display":          "standalone",
-		"background_color": "#141312",
-		"theme_color":      "#141312",
+		"background_color": colour,
+		"theme_color":      colour,
 		"icons": []map[string]any{
 			{"src": "/app-192.png", "sizes": "192x192", "type": "image/png"},
 			{"src": "/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},

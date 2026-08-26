@@ -26,7 +26,15 @@
 <label for="url">address of your newtab</label>
 <input id="url" type="url" placeholder="http://127.0.0.1:5669" autofocus spellcheck="false">
 <p id="state"></p>
+
+<label for="colour">colour while it loads</label>
+<input id="colour" type="text" placeholder="#141312" spellcheck="false">
+<p id="colourstate"></p>
 <button id="try" disabled>Open a new tab</button>
+
+<p>The colour is what the tab shows for the moment before your page
+appears. Your page prints its own at <code>/manifest.webmanifest</code>, as
+<code>background_color</code> — paste that and the wait becomes invisible.</p>
 
 <p>Running newtab on this machine? That is the address above. Running it on a
 server? Use its address instead. Saved as you type — there is no other button.</p>
