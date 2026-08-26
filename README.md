@@ -181,11 +181,36 @@ proxmox:
 That row reads `16 · 29% · 51%` — guests running, cpu, memory — and hovering it
 spells that out. `PVEAuditor` is enough. The secret is not in the config file.
 
+## On a server
+
+Two files are the whole setup: your `config.yaml`, and either a compose file or
+a systemd unit. Nothing is built here — every
+[release](https://github.com/eeegoloauq/newtab/releases) carries binaries for
+linux/amd64 and arm64, the browser extension, and `SHA256SUMS`.
+
+**Docker.** The image is 23 MB, has no shell in it and runs as `nobody`. Put
+[`contrib/compose.yaml`](contrib/compose.yaml) next to your config:
+
+```sh
+docker compose up -d
+```
+
+**Or the binary.**
+
+```sh
+install -m 0755 newtab-linux-amd64 /usr/bin/newtab
+install -m 0644 contrib/systemd/newtab.service /etc/systemd/system/
+mkdir -p /etc/newtab && cp config.yaml /etc/newtab/
+newtab icons /etc/newtab/config.yaml     # fetch the site icons once
+systemctl enable --now newtab
+```
+
+Then put a reverse proxy in front of it, or open the port to your LAN. Go is
+only needed if you build it yourself.
+
 ## Notes
 
 The page sends no referrer and loads nothing from anywhere but your own server.
-
-Binaries: [releases](https://github.com/eeegoloauq/newtab/releases).
-Systemd unit: [`contrib/systemd/newtab.service`](contrib/systemd/newtab.service).
+There is no state to keep beyond the config and the icon directory.
 
 MIT.
