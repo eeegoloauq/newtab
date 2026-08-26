@@ -96,6 +96,14 @@ func Demo(c *config.Config, snap status.Snapshot, pve proxmox.Stats, inline bool
 	return build(c, inline, snap, pve)
 }
 
+// Extension renders the page for a browser extension: icons embedded and
+// the script in a file of its own, because an extension page refuses an
+// inline one.
+func Extension(c *config.Config, scriptName string) (page, script []byte, err error) {
+	page, err = buildExtension(c, scriptName)
+	return page, Script(), err
+}
+
 // Render returns the page as a file. With inline set, the icons are
 // embedded in it and the result needs nothing else — no server, no
 // network, no icon directory.

@@ -32,13 +32,17 @@ var pageJS string
 var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
 type pageView struct {
-	Title   string
-	Lang    string
-	Text    config.Text
-	Engine  string
-	CSS     template.CSS
-	JS      template.JS
-	Columns []columnView
+	// ScriptSrc names an external script instead of inlining it. Browser
+	// extension pages forbid inline scripts, and that is the only place
+	// this is used.
+	ScriptSrc string
+	Title     string
+	Lang      string
+	Text      config.Text
+	Engine    string
+	CSS       template.CSS
+	JS        template.JS
+	Columns   []columnView
 }
 
 // columnView is one column of the page. Dealing the sections into
@@ -97,6 +101,10 @@ func render(c *config.Config, snap status.Snapshot, pve proxmox.Stats) ([]byte, 
 	return build(c, false, snap, pve)
 }
 
+// Script is the page's JavaScript, for the one caller that has to ship it
+// as a separate file.
+func Script() []byte { return []byte(pageJS) }
+
 // buildInline is the same page with every icon embedded as a data: URI,
 // so the result is a single file that works from disk, inside a browser
 // extension, or anywhere the server is not reachable.
@@ -104,14 +112,25 @@ func buildInline(c *config.Config) ([]byte, error) {
 	return build(c, true, status.Snapshot{}, proxmox.Stats{})
 }
 
+// buildExtension is the single-file page with its script pulled out, for
+// a browser extension: extension pages refuse inline scripts.
+func buildExtension(c *config.Config, script string) ([]byte, error) {
+	return buildWith(c, true, status.Snapshot{}, proxmox.Stats{}, script)
+}
+
 func build(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats) ([]byte, error) {
+	return buildWith(c, inline, snap, pve, "")
+}
+
+func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.Stats, script string) ([]byte, error) {
 	v := pageView{
-		Title:  c.Title,
-		Lang:   c.Lang,
-		Text:   c.Text,
-		Engine: c.Search.Engine,
-		CSS:    template.CSS(pageCSS),
-		JS:     template.JS(pageJS),
+		ScriptSrc: script,
+		Title:     c.Title,
+		Lang:      c.Lang,
+		Text:      c.Text,
+		Engine:    c.Search.Engine,
+		CSS:       template.CSS(pageCSS),
+		JS:        template.JS(pageJS),
 	}
 	store := icons.Store{Dir: c.IconDir}
 	var flat []sectionView

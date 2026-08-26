@@ -69,6 +69,8 @@ const usage = `newtab — start page
                                         write the page to a file; -inline
                                         embeds the icons so the file stands alone
   newtab icons [-force] <config.yaml>   fetch each site's own icon into icon_dir
+  newtab extension <config.yaml> <dir>  write a browser extension that makes
+                                        this page the new tab
   newtab demo [-write out.html]         the page on made-up state, for a look
   newtab version
 `
@@ -149,6 +151,35 @@ func ctxFor(cancels *[]context.CancelFunc) context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	*cancels = append(*cancels, cancel)
 	return ctx
+}
+
+//go:embed manifest.json
+var manifestJSON []byte
+
+// writeExtension produces the three files Chrome and Firefox both accept
+// as an unpacked extension. The page is the same page, with its icons
+// embedded and its script in a file: an extension page refuses an inline
+// script, and nothing here may reach the network anyway.
+func writeExtension(c *config.Config, dir string) error {
+	page, script, err := web.Extension(c, "newtab.js")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	files := map[string][]byte{
+		"manifest.json": manifestJSON,
+		"newtab.html":   page,
+		"newtab.js":     script,
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
+			return err
+		}
+	}
+	fmt.Printf("wrote %s — load it as an unpacked extension\n", dir)
+	return nil
 }
 
 //go:embed all:demo.yaml
@@ -238,6 +269,15 @@ func run(args []string) error {
 			return fmt.Errorf("icon_dir is not set in the config")
 		}
 		return fetchIcons(c, force)
+	case "extension":
+		if len(args) < 3 {
+			return fmt.Errorf("extension needs a config file and a directory")
+		}
+		c, err := config.Load(args[1])
+		if err != nil {
+			return err
+		}
+		return writeExtension(c, args[2])
 	case "demo":
 		return demo(args[1:])
 	case "render":

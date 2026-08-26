@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<!-- Every site you open from here would otherwise be told where you came
+     from, and the name of a private start page is nobody else's business. -->
+<meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
 <title>{{.Title}}</title>
 <style>{{.CSS}}</style>
@@ -41,6 +44,6 @@
 </div>{{end}}
 </main>
 
-<script>{{.JS}}</script>
+{{if .ScriptSrc}}<script src="{{.ScriptSrc}}"></script>{{else}}<script>{{.JS}}</script>{{end}}
 </body>
 </html>

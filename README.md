@@ -1,42 +1,27 @@
 # newtab
 
-A start page: everything you open on one screen, filtered as you type.
+The page your browser opens instead of its own new tab. Your links on one
+screen, type to filter them, Enter opens the one you meant.
 
 ![The demo page](docs/screenshot.png)
 
-Type anywhere — the first keystroke lands in the field and the links narrow as
-you go. Enter opens the first match, or searches the web with what you typed.
-Arrows walk the matches, Escape clears. Links open in the tab you are in,
-because that is the tab you opened to go somewhere.
-
-Sections come in two kinds. `list` is plain bookmarks: icon, name. `live` is for
-things that can be down, and those rows can carry state — how long something has
-been down, or a number about it.
-
-## Why it is a program and not a file
-
-The page is static, and you can have it as a file: `newtab render -inline
-config.yaml page.html` writes the whole thing, icons and all, into one HTML
-document that works from disk. If links are all you want, stop there.
-
-The program earns its place on the three things a file cannot do:
-
-- fetch each site's own icon once and serve it from your own origin,
-- read an uptime monitor and put what it says on the matching rows,
-- read the Proxmox API, which needs a token that must never be inside a page
-  the browser loads.
-
-## Running it
+## Run it
 
 ```sh
 go build ./cmd/newtab
-./newtab demo                        # the page above, on invented state
+./newtab demo                        # the page above, on made-up state
 
-cp config.example.yaml config.yaml   # then edit it
+cp config.example.yaml config.yaml   # your links go here
 ./newtab validate config.yaml
-./newtab icons config.yaml           # fetch each site's icon
 ./newtab run config.yaml
 ```
+
+Icons are fetched from the sites themselves on the first run and read from
+disk after that, so a page never waits on the network. A site that serves no
+icon gets the globe a browser would draw; a file you put in `icon_dir` yourself
+wins over the fetcher.
+
+## Config
 
 ```yaml
 sections:
@@ -48,13 +33,24 @@ sections:
         alias: [hn]          # also matches when you type this
 ```
 
-Icons come from the sites themselves, never through a favicon service: asking
-one for forty icons hands it your list of links. They are fetched once and read
-from disk after that — a running server also picks up icons for links you have
-just added, in the background, so adding a link is editing the config and
-nothing else. Rendering never waits on the network. A site that serves none gets
-the globe a browser would draw, and a file you drop into `icon_dir` yourself
-always beats the fetcher.
+`style: list` is bookmarks. `style: live` is for things that can be down — those
+rows can show state, see below. Full example: [config.example.yaml](config.example.yaml).
+
+## As a new tab
+
+Chrome and Firefox only let an extension replace the new tab page, so newtab
+writes one:
+
+```sh
+./newtab extension config.yaml ./ext
+```
+
+That is a folder with the page, its icons and a manifest — load it unpacked
+(`chrome://extensions` → Developer mode → Load unpacked). It is a snapshot: no
+server, no network, no live state. Rebuild it when the links change.
+
+For the live version, run the server and point the extension or your homepage
+setting at it.
 
 ## State from a monitor
 
@@ -65,13 +61,13 @@ status:
   tail: exceptions
 ```
 
-Rows are matched to checks by the host they point at, or by `check:` on the
-link. A row that is down says so and for how long. What a healthy row says is
-`tail`: `exceptions` (the default — nothing, until the last day was less than
-perfect), `latency`, `uptime24h`, `uptime7d` or `quiet`.
+Rows match checks by the host they point at, or by `check:` on the link. A row
+that is down says so and for how long. A healthy row shows what `tail` says:
+`exceptions` (default: nothing until the last day was less than perfect),
+`latency`, `uptime24h`, `uptime7d`, `quiet`.
 
-Written against [lookout](https://github.com/eeegoloauq/lookout), but the
-document it reads is small enough to serve from anything:
+Written for [lookout](https://github.com/eeegoloauq/lookout), but it only reads
+this much, so anything can serve it:
 
 ```json
 {"version": 1, "checks": [
@@ -81,8 +77,8 @@ document it reads is small enough to serve from anything:
 ]}
 ```
 
-The poll runs on its own clock and nothing is written back, so a monitor that is
-slow or unreachable costs the page nothing: the rows go quiet, not blank.
+The poll is on its own clock and nothing is written back, so a monitor that is
+slow or down costs the page nothing.
 
 ## Numbers from Proxmox
 
@@ -94,18 +90,15 @@ proxmox:
   insecure: true                    # it answers with its own certificate
 ```
 
-That row then reads `16 · 29% · 51%` — guests running, cpu, memory — and hovering
-it spells that out. A token holding `PVEAuditor` is enough, and the secret stays
-out of the config file.
+That row reads `16 · 29% · 51%` — guests running, cpu, memory — and hovering it
+spells that out. `PVEAuditor` is enough. The secret is not in the config file.
 
-## Install
+## Notes
 
-Binaries for linux/amd64 and arm64 are attached to each
-[release](https://github.com/eeegoloauq/newtab/releases). There is no state to
-keep beyond the config and the icon directory;
-[`contrib/systemd/newtab.service`](contrib/systemd/newtab.service) is a hardened
-unit to copy.
+The page sends no referrer, so the sites you open are not told where you came
+from. Nothing on it loads from anywhere but your own server.
 
-## License
+Binaries: [releases](https://github.com/eeegoloauq/newtab/releases).
+A hardened systemd unit: [`contrib/systemd/newtab.service`](contrib/systemd/newtab.service).
 
-MIT
+MIT.
