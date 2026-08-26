@@ -35,6 +35,21 @@ jobs:
               go build -trimpath -o dist/newtab-linux-$arch ./cmd/newtab
           done
           cd dist && sha256sum newtab-* > SHA256SUMS
+      # A ready-to-load extension built from the example config, so that
+      # trying this out is unzip-and-load rather than build-and-run. The
+      # icons are fetched here, where the network is not somebody's home
+      # connection.
+      - name: extension
+        env:
+          # The example config names a token variable; nothing here talks
+          # to a hypervisor, but validate refuses an empty one.
+          NEWTAB_PROXMOX_TOKEN: none
+        run: |
+          go run ./cmd/newtab icons config.example.yaml || true
+          go run ./cmd/newtab extension config.example.yaml dist/extension
+          cd dist && zip -qr newtab-extension-example.zip extension && rm -rf extension
+          sha256sum newtab-extension-example.zip >> SHA256SUMS
+
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}

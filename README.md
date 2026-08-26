@@ -65,11 +65,16 @@ writes one:
 ```
 
 That is a folder with the page, its icons and a manifest — load it unpacked
-(`chrome://extensions` → Developer mode → Load unpacked). It is a snapshot: no
-server, no network, no live state. Rebuild it when the links change.
+(`chrome://extensions` → Developer mode → Load unpacked, or `about:debugging`
+in Firefox). It is a snapshot: it needs no server and reaches no network, and
+it shows no live state. Rebuild it when your links change.
 
-For the live version, run the server and point the extension or your homepage
-setting at it.
+Every [release](https://github.com/eeegoloauq/newtab/releases) also carries
+`newtab-extension-example.zip`, the same thing built from the example config —
+enough to see what it is before writing your own.
+
+If you do run the server, point the browser at it instead and the page stays
+live: state from the monitor, icons for links you added five seconds ago.
 
 ## State from a monitor
 
