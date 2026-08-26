@@ -12,7 +12,7 @@ func testConfig() *config.Config {
 		Title:  "newtab",
 		Search: config.Search{Engine: "https://example.com/?q=%s"},
 		Sections: []config.Section{
-			{Name: "Services", Style: config.StyleCards, Links: []config.Link{
+			{Name: "Services", Style: config.StyleLive, Links: []config.Link{
 				{Name: "Music", URL: "https://music.example.com/", Alias: []string{"Музыка"}},
 			}},
 			{Name: "Work", Style: config.StyleList, Links: []config.Link{
@@ -28,12 +28,16 @@ func TestRenderSplitsStyles(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := string(body)
-	if !strings.Contains(html, `class="card"`) || !strings.Contains(html, "<li>") {
-		t.Fatal("both a card and a list item were expected")
+	// A live row carries a status dot and a tail; a bookmark carries
+	// neither, and both are list items in the same columns.
+	if strings.Count(html, "<li><a") != 2 {
+		t.Fatalf("expected two rows, got %d", strings.Count(html, "<li><a"))
 	}
-	// The host is shown on cards and must be the bare one.
+	if strings.Count(html, `class="dot"`) != 1 {
+		t.Fatal("the dot belongs to the live row only")
+	}
 	if !strings.Contains(html, ">music.example.com<") {
-		t.Fatal("card host missing")
+		t.Fatal("the live row should carry its host in the tail")
 	}
 }
 

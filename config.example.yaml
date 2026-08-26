@@ -2,15 +2,16 @@
 # in the repo, the real one does not.
 title: newtab
 listen: 127.0.0.1:5669
+icon_dir: ./icons
 
 search:
   # %s is the query. Any engine works; this is not a provider list.
   engine: https://www.google.com/search?q=%s
 
 sections:
-  # style: cards — things that can be down, drawn as tiles.
+  # style: live — things that can be down, drawn as tiles.
   - name: Infra
-    style: cards
+    style: live
     links:
       - name: Hypervisor
         url: https://198.51.100.10:8006/
@@ -20,7 +21,7 @@ sections:
         url: http://198.51.100.12:3000/
 
   - name: Services
-    style: cards
+    style: live
     links:
       - name: Photos
         url: https://photos.example.com/

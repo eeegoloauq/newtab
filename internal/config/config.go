@@ -15,17 +15,22 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// Style says how a section is drawn. Two styles, chosen deliberately:
-// things with a live status earn a card, plain bookmarks are a list. A
-// section moves between the two by editing one word.
+// Style says how a section is drawn. Both are lists in the same columns —
+// tiles were tried and thrown away, they turned a page of links into a
+// launcher. A live section adds two things to each row: a status dot and
+// a tail for the host or a number. A section moves between the two by
+// editing one word.
 const (
-	StyleCards = "cards"
-	StyleList  = "list"
+	StyleLive = "live"
+	StyleList = "list"
 )
 
 type Config struct {
-	Title    string    `yaml:"title"`
-	Listen   string    `yaml:"listen"`
+	Title  string `yaml:"title"`
+	Listen string `yaml:"listen"`
+	// IconDir holds icons fetched by `newtab icons`. Empty means the page
+	// draws monograms and never mentions an image.
+	IconDir  string    `yaml:"icon_dir"`
 	Search   Search    `yaml:"search"`
 	Sections []Section `yaml:"sections"`
 }
@@ -113,8 +118,8 @@ func (c *Config) validate() error {
 			return fmt.Errorf("section %q appears twice", s.Name)
 		}
 		seenSection[s.Name] = true
-		if s.Style != StyleCards && s.Style != StyleList {
-			return fmt.Errorf("section %q: style %q is neither %q nor %q", s.Name, s.Style, StyleCards, StyleList)
+		if s.Style != StyleLive && s.Style != StyleList {
+			return fmt.Errorf("section %q: style %q is neither %q nor %q", s.Name, s.Style, StyleLive, StyleList)
 		}
 		if len(s.Links) == 0 {
 			return fmt.Errorf("section %q has no links", s.Name)

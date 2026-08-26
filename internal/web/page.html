@@ -10,43 +10,27 @@
 </head>
 <body data-engine="{{.Engine}}">
 <form class="find" id="find" autocomplete="off">
-  <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
-         autofocus placeholder="начни печатать" aria-label="Фильтр ссылок и поиск в интернете">
-  <p class="note" id="note" aria-live="polite"></p>
+  <label for="q">фильтр</label>
+  <input id="q" type="text" autocomplete="off" autocorrect="off" spellcheck="false" autofocus
+         aria-describedby="note">
+  <p class="note" id="note" aria-live="polite">Enter — первая ссылка, иначе поиск</p>
 </form>
 
 <main>
-{{if .Cards}}
-<div class="cards">
-{{range .Cards}}
-  <section class="sec" data-sec>
-    <h2>{{.Name}}</h2>
-    <div class="grid">
-    {{range .Links}}
-      <a class="card" href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}">
-        <span class="name">{{.Name}}</span>
-        <span class="host">{{.Host}}</span>
-      </a>
-    {{end}}
-    </div>
-  </section>
-{{end}}
-</div>
-{{end}}
-
-{{if .Lists}}
-<div class="lists">
-{{range .Lists}}
-  <section class="sec" data-sec>
-    <h2>{{.Name}}</h2>
+{{range $sec := .Sections}}
+  <section class="sec{{if $sec.Live}} live{{end}}" data-sec>
+    <h2>{{$sec.Name}}</h2>
     <ul>
-    {{range .Links}}
-      <li><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}">{{.Name}}</a></li>
+    {{range $sec.Links}}
+      <li><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}"
+        >{{if .Icon}}<img class="ico" src="{{.Icon}}" alt="" width="16" height="16"
+        >{{else}}<span class="ico none" aria-hidden="true"></span>{{end
+        }}{{if $sec.Live}}<span class="dot" aria-hidden="true"></span>{{end
+        }}<span class="name">{{.Name}}</span
+        >{{if .Tail}}<span class="tail">{{.Tail}}</span>{{end}}</a></li>
     {{end}}
     </ul>
   </section>
-{{end}}
-</div>
 {{end}}
 </main>
 

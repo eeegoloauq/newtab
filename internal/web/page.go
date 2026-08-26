@@ -9,8 +9,10 @@ import (
 	"html/template"
 	"net/url"
 	"strings"
+	"unicode"
 
 	"github.com/eeegoloauq/newtab/internal/config"
+	"github.com/eeegoloauq/newtab/internal/icons"
 )
 
 //go:embed page.html
@@ -25,16 +27,18 @@ var pageJS string
 var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
 type pageView struct {
-	Title  string
-	Engine string
-	CSS    template.CSS
-	JS     template.JS
-	Cards  []sectionView
-	Lists  []sectionView
+	Title    string
+	Engine   string
+	CSS      template.CSS
+	JS       template.JS
+	Sections []sectionView
 }
 
 type sectionView struct {
-	Name  string
+	Name string
+	// Live marks a section of things that can be down: its rows carry a
+	// status dot and a tail. Everything else is a bookmark: icon, name.
+	Live  bool
 	Links []linkView
 }
 
@@ -42,16 +46,28 @@ type linkView struct {
 	Name string
 	URL  string
 	Host string
+	// Icon is the path to serve the site's own icon from, or "" when we
+	// have none. The check happens here, at render time, so the browser
+	// is never asked to load an image that does not exist.
+	Icon string
+	// Mono is the letter drawn in an icon's place. It keeps the left edge
+	// of every list straight, which is the whole reason the icons are
+	// there.
+	Mono string
+	// Tail is what a live row carries after the name: the host today, a
+	// number when something is worth saying about the thing itself. It is
+	// the only place on the page where a value goes, and it is deliberately
+	// the same slot for every row so the columns stay straight.
+	Tail string
 	// Key is what the filter matches against: the name, the host and any
 	// aliases, lowercased and joined. Matching happens in the browser
 	// against this one string so the filter never touches the network.
 	Key string
 }
 
-// render builds the whole document. Card sections are drawn first as a
-// block, then the list sections flow as columns, regardless of how the
-// two are interleaved in the config — the config's order is preserved
-// within each of the two groups.
+// render builds the whole document. Every section is a list and they all
+// flow through the same columns, in config order: the operator's order is
+// the reading order.
 func render(c *config.Config) ([]byte, error) {
 	v := pageView{
 		Title:  c.Title,
@@ -59,21 +75,27 @@ func render(c *config.Config) ([]byte, error) {
 		CSS:    template.CSS(pageCSS),
 		JS:     template.JS(pageJS),
 	}
+	store := icons.Store{Dir: c.IconDir}
 	for _, s := range c.Sections {
 		sv := sectionView{Name: s.Name}
 		for _, l := range s.Links {
-			sv.Links = append(sv.Links, linkView{
+			lv := linkView{
 				Name: l.Name,
 				URL:  l.URL,
 				Host: hostOf(l.URL),
 				Key:  searchKey(l),
-			})
+				Mono: mono(l.Name),
+			}
+			if s.Style == config.StyleLive {
+				lv.Tail = lv.Host
+			}
+			if store.Path(l.Name) != "" {
+				lv.Icon = "/icon/" + icons.Slug(l.Name)
+			}
+			sv.Links = append(sv.Links, lv)
 		}
-		if s.Style == config.StyleCards {
-			v.Cards = append(v.Cards, sv)
-		} else {
-			v.Lists = append(v.Lists, sv)
-		}
+		sv.Live = s.Style == config.StyleLive
+		v.Sections = append(v.Sections, sv)
 	}
 	var buf bytes.Buffer
 	if err := pageTmpl.Execute(&buf, v); err != nil {
@@ -88,6 +110,17 @@ func hostOf(raw string) string {
 		return ""
 	}
 	return strings.TrimPrefix(u.Hostname(), "www.")
+}
+
+// mono is the first letter of the name, upper-cased. Cyrillic and Latin
+// both work; anything else falls back to a dot rather than a box glyph.
+func mono(name string) string {
+	for _, r := range name {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return string(unicode.ToUpper(r))
+		}
+	}
+	return "\u00b7"
 }
 
 func searchKey(l config.Link) string {
