@@ -72,6 +72,17 @@ when its owner sat down at the computer, which is the leak the favicon service
 was rejected for. Fetching happens when a link is added; a running server does
 it in the background for links it has not seen before.
 
+## Resizing the background
+
+The file is served as it is, cached for a day. Resizing it would mean either an
+image library or a hand-rolled resampler, for something done once by hand;
+`newtab validate` prints a note when the file is over a megabyte instead.
+
+The photograph in the gallery is
+[Misty Mountains in Norway](https://commons.wikimedia.org/wiki/File:Misty_Mountains_in_Norway_(Unsplash).jpg),
+CC0 — chosen over brighter ones because a background competes with the text
+until it stops being interesting.
+
 ## A database
 
 There is no state to keep. The page is a function of the config file.

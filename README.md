@@ -69,12 +69,6 @@ theme:
 
 ![With a background](docs/looks/photo.png)
 
-The file is served as it is, cached for a day; nothing resizes it. Around
-2560px wide and half a megabyte is the sweet spot, and `newtab validate` says so
-when the file is larger. The photo above is
-[Lofoten by Johannes Groll](https://commons.wikimedia.org/wiki/File:Lofoten,_Norway_(Unsplash).jpg),
-CC0.
-
 ```yaml
 columns: 3
 theme:

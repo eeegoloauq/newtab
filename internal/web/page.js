@@ -4,6 +4,7 @@
 (function () {
   var engine = document.body.dataset.engine;
   var said = document.getElementById('said');
+  var main = document.querySelector('main');
   var q = document.getElementById('q');
   var links = Array.prototype.slice.call(document.querySelectorAll('a[data-key]'));
   var sections = Array.prototype.slice.call(document.querySelectorAll('[data-sec]'));
@@ -38,6 +39,17 @@
       : hit ? document.body.dataset.opens + ': ' + hit.dataset.name
       : document.body.dataset.web;
   }
+
+  // Filtering must not move the page under the reader: with the block
+  // centred, a shorter list would slide the field down while they type,
+  // and an empty result would drop it to the middle of the window. The
+  // list keeps the height it had before anyone touched it.
+  function reserve() {
+    main.style.minHeight = '';
+    main.style.minHeight = main.offsetHeight + 'px';
+  }
+  reserve();
+  window.addEventListener('resize', reserve);
 
   q.addEventListener('input', function () { apply(q.value); });
 

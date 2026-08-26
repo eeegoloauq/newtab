@@ -330,6 +330,10 @@ func themeCSS(t config.Theme) string {
 		// and text on a photograph is the oldest way to make it
 		// unreadable.
 		b.WriteString("body{background:var(--shade) url(/background) center/cover fixed;background-blend-mode:darken;}")
+		// A photograph has bright patches wherever it likes, and the
+		// quiet inks disappear into them. A shadow under the text costs
+		// nothing and holds it up over anything.
+		b.WriteString("body{text-shadow:0 1px 2px rgba(0,0,0,.6);}")
 	}
 	return b.String()
 }
