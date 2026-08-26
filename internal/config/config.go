@@ -28,7 +28,15 @@ const (
 	StyleList = "list"
 )
 
+// maxComfortableImage is where a background stops being a background
+// and starts being a download.
+const maxComfortableImage = 1 << 20
+
 type Config struct {
+	// Notes are things worth saying out loud that are not errors. The
+	// CLI prints them; nothing else reads them.
+	Notes []string `yaml:"-"`
+
 	Title  string `yaml:"title"`
 	Listen string `yaml:"listen"`
 	// IconDir holds icons fetched by `newtab icons`. Empty means every row
@@ -387,8 +395,17 @@ func (c *Config) validate() error {
 		return fmt.Errorf("theme.image_dim is %v: expected 0 to 1", c.Theme.ImageDim)
 	}
 	if c.Theme.Image != "" {
-		if _, err := os.Stat(c.Theme.Image); err != nil {
+		info, err := os.Stat(c.Theme.Image)
+		if err != nil {
 			return fmt.Errorf("theme.image %q: %w", c.Theme.Image, err)
+		}
+		// Not an error: it is the operator's screen and their bandwidth.
+		// But the page is opened dozens of times a day, and a background
+		// nobody looks at closely does not need to be a poster.
+		if info.Size() > maxComfortableImage {
+			c.Notes = append(c.Notes, fmt.Sprintf(
+				"theme.image is %.1f MB; a background is not looked at closely, and 2560px wide at ~500 KB looks the same",
+				float64(info.Size())/(1<<20)))
 		}
 	}
 	if c.Rates.Enabled() {

@@ -275,6 +275,9 @@ func run(args []string) error {
 			links += len(s.Links)
 		}
 		fmt.Printf("ok: %d sections, %d links, listening on %s\n", len(c.Sections), links, c.Listen)
+		for _, note := range c.Notes {
+			fmt.Println("note:", note)
+		}
 		return nil
 	case "icons":
 		force := len(args) > 1 && args[1] == "-force"
