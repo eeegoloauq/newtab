@@ -50,6 +50,13 @@ func newClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,
 		Transport: &http.Transport{
+			// A custom transport does not read the proxy variables unless
+			// it is told to, and a hand-built one silently ignored them:
+			// running the fetch behind a proxy did nothing. That matters
+			// where a network blocks a site outright — the icon of a site
+			// you cannot reach directly is exactly the one you have to
+			// fetch through something else.
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}

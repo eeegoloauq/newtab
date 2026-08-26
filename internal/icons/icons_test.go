@@ -1,6 +1,10 @@
 package icons
 
-import "testing"
+import (
+	"net/http"
+	"reflect"
+	"testing"
+)
 
 func TestSlug(t *testing.T) {
 	cases := map[string]string{
@@ -36,5 +40,21 @@ func TestSlugOfSymbolsOnlyIsStable(t *testing.T) {
 	}
 	if Slug("!!!") == Slug("???") {
 		t.Fatal("two symbol-only names collided")
+	}
+}
+
+// A hand-built transport ignores HTTPS_PROXY unless it is told not to,
+// and the fetch quietly went direct. On a network that blocks a site,
+// that is the difference between having its icon and not.
+func TestClientHonoursProxyEnvironment(t *testing.T) {
+	tr, ok := newClient(0).Transport.(*http.Transport)
+	if !ok || tr.Proxy == nil {
+		t.Fatal("the icon client would ignore HTTP_PROXY and HTTPS_PROXY")
+	}
+	// Comparing the function itself rather than its behaviour: the
+	// environment is read once per process, so setting it here would come
+	// too late to observe.
+	if reflect.ValueOf(tr.Proxy).Pointer() != reflect.ValueOf(http.ProxyFromEnvironment).Pointer() {
+		t.Fatal("the proxy hook is not ProxyFromEnvironment")
 	}
 }
