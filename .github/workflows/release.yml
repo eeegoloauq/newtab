@@ -42,9 +42,11 @@ jobs:
       - name: extension
         run: |
           go run ./cmd/newtab icons config.example.yaml || true
-          go run ./cmd/newtab extension config.example.yaml dist/extension
-          cd dist && zip -qr newtab-extension-example.zip extension && rm -rf extension
-          sha256sum newtab-extension-example.zip >> SHA256SUMS
+          go run ./cmd/newtab extension config.example.yaml dist/newtab-extension
+          cd dist && zip -qr newtab-extension-offline.zip newtab-extension && rm -rf newtab-extension
+          cd .. && cp -r contrib/extension-live dist/newtab-live
+          cd dist && zip -qr newtab-extension-live.zip newtab-live && rm -rf newtab-live
+          sha256sum newtab-extension-offline.zip newtab-extension-live.zip >> SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
         with:
