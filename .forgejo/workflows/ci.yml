@@ -1,0 +1,48 @@
+# The pre-merge check, and the only thing this repository asks of the local
+# runner: pull requests live in Forgejo, so the gate has to be here. Everything
+# after the merge — main, tags, releases, publishing — runs on GitHub, where the
+# copy of this file in .github/workflows does the same work for free.
+#
+# NB: because this directory exists, Forgejo ignores .github/workflows entirely.
+name: ci
+
+on:
+  pull_request
+
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the running check pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt'd:"; echo "$unformatted"; exit 1
+          fi
+      - run: go test -race ./...
+      - run: CGO_ENABLED=0 go build ./cmd/newtab
+      # The example config is the only documentation of the format, so it
+      # has to keep loading — and it has to load with nothing set up, the
+      # way a stranger will load it.
+      - name: validate the example config
+        run: go run ./cmd/newtab validate config.example.yaml
+      # A page that fails to render is not something to find out about in
+      # production, and rendering needs no server.
+      - name: render the example config
+        run: go run ./cmd/newtab render config.example.yaml /tmp/page.html
