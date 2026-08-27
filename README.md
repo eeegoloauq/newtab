@@ -1,7 +1,7 @@
 # newtab
 
-The page your browser opens instead of its own new tab. Your links on one
-screen, type to filter them, Enter opens the one you meant.
+The page your browser opens instead of its own new tab: your links on one
+screen, filtered as you type.
 
 ![The demo page](docs/screenshot.png)
 
@@ -79,8 +79,7 @@ rates:
 
 `EUR 0.86 · BTC 78k` beside the field. Currencies from
 [open.er-api.com](https://open.er-api.com/), crypto from Coinbase's public spot
-price. Neither needs an account. TradingView has no free API — only an embedded
-widget, which would mean somebody else's script on your page.
+price. Neither needs an account.
 
 ## Weather
 
@@ -96,22 +95,14 @@ Temperature and a glyph beside the field, from
 
 ## Making it your start page
 
-**Chrome, Edge, desktop.** Settings → On startup → Open a specific page, and
-Appearance → Show home button → enter the address. That covers the button and
-every launch; the new tab page itself can only be replaced by an extension, see
-below.
+**Chrome, Edge, desktop.** Settings → On startup, and Appearance → Show home
+button. **Firefox, desktop.** Settings → Home → Homepage and new windows →
+Custom URLs. Neither can point the new tab page itself at a URL — that needs an
+extension, below.
 
-**Firefox, desktop.** Settings → Home → Homepage and new windows → Custom URLs.
-The New Tab setting there offers only Firefox Home or a blank page, so replacing
-the new tab needs an extension in Firefox too.
-
-**Android.** Chrome → Settings → Homepage → enter the address; the home button
-then opens it. Or open the page and use ⋮ → Add to Home screen: it installs as
-an app, full screen, with its own icon.
-
-**iPhone.** Safari cannot be told to open a URL as its start page. Open the page
-and use Share → Add to Home Screen — same result: an icon that opens it full
-screen.
+**Android, iPhone.** Add to Home screen from the browser menu: it opens full
+screen with its own icon. Chrome on Android also takes the address under
+Settings → Homepage.
 
 ## As a new tab
 
@@ -124,8 +115,8 @@ writes one:
 
 A folder with the page, its icons and a manifest: load it unpacked
 (`chrome://extensions` → Developer mode → Load unpacked, or `about:debugging`
-in Firefox). It is a snapshot — no server, no network, no live state — so
-rebuild it when your links change. Every
+in Firefox). It is a snapshot with nothing behind it, so rebuild it when your
+links change. Every
 [release](https://github.com/eeegoloauq/newtab/releases) carries one built from
 the example config.
 
@@ -165,8 +156,7 @@ The whole of what it reads:
 ]}
 ```
 
-Nothing is written back, and the poll is on its own clock, so a monitor that is
-slow or down costs the page nothing.
+Nothing is written back, and the poll runs on its own clock.
 
 ## Numbers from Proxmox
 
@@ -183,8 +173,8 @@ spells that out. `PVEAuditor` is enough. The secret is not in the config file.
 
 ## On a server
 
-Two files are the whole setup: your `config.yaml`, and either a compose file or
-a systemd unit. Nothing is built here — every
+Setup is your `config.yaml` plus either a compose file or a systemd unit.
+Nothing is built here: every
 [release](https://github.com/eeegoloauq/newtab/releases) carries binaries for
 linux/amd64 and arm64, the browser extension, and `SHA256SUMS`.
 
