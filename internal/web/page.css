@@ -23,6 +23,32 @@
   /* The size of a link. Everything else is relative to it, so one number
      in the config changes the whole page. */
   --size: 17px;
+  /* The field is the one native control on the page; without this it
+     keeps a white box and a black caret in a dark window. */
+  color-scheme: light dark;
+}
+
+/* The page follows the browser instead of insisting on night. A start
+   page that is dark in a light desktop is a rectangle of night in the
+   middle of the morning, and the tab opened from it — lookout — already
+   follows the setting, so the pair used to disagree twice a day. Dark
+   stays the base and light is the override, because dark is what this
+   page was drawn for and the greys were picked against that black. */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Warm paper, the same base lookout uses in light: the two pages are
+       opened one after the other all day and must not read as two
+       products. */
+    --bg: #faf8f5;
+    --ink: #23201b;
+    --dim: #6b6459;
+    /* 5.6:1 on the paper. A group label has to survive being read at a
+       glance in daylight, which is exactly where a pale grey fails. */
+    --head: #6b6459;
+    --line: #ded8cd;
+    /* lookout's light-theme down red, for the same reason as above. */
+    --down: #b42318;
+  }
 }
 
 * { box-sizing: border-box; }
