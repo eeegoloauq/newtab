@@ -252,6 +252,15 @@ svg.ico { color: var(--head); }
 /* --- filtering ------------------------------------------------------ */
 .out { display: none; }
 
+/* Three matches spread across three columns leave the eye searching the
+   full width of the screen for the one Enter opens. While there is a
+   query the columns collapse into a single list under the field, so the
+   first match is always the line right below the cursor. display:contents
+   drops the column boxes so the sections become items of that list, and
+   the order they were written in is restored by their order property. */
+.filtering main { flex-direction: column; flex-wrap: nowrap; gap: 0; }
+.filtering .col { display: contents; }
+
 /* The first match is what Enter opens. A mark on the left edge says so
    without repainting a block on every keystroke. */
 .hit { box-shadow: inset 2px 0 0 var(--ink); padding-left: 8px; margin-left: -8px; }

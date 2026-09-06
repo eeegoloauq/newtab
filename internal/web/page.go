@@ -102,6 +102,11 @@ type columnView struct {
 
 type sectionView struct {
 	Name string
+	// Order is the section's place in the config. Columns are packed by
+	// height, so reading down a column follows the config but reading
+	// across the page does not; while filtering the columns collapse into
+	// one list, and this is what puts that list back in config order.
+	Order int
 	// Live marks a section of things that can be down: its rows carry a
 	// status dot and a tail. Everything else is a bookmark: icon, name.
 	Live  bool
@@ -210,7 +215,7 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 	store := icons.Store{Dir: c.IconDir}
 	var flat []sectionView
 	for _, s := range c.Sections {
-		sv := sectionView{Name: s.Name}
+		sv := sectionView{Name: s.Name, Order: len(flat)}
 		for _, l := range s.Links {
 			lv := linkView{
 				Pin:  l.Pin,

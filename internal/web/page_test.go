@@ -166,3 +166,23 @@ func TestRenderEscapes(t *testing.T) {
 		t.Fatal("a link name was rendered as markup")
 	}
 }
+
+// Columns are packed by height, so a section's place in the document is not
+// its place in the config. While filtering, the page shows one list instead
+// of columns, and this attribute is what puts that list back in the order
+// the sections were written in.
+func TestSectionsCarryTheirConfigOrder(t *testing.T) {
+	body, err := render(testConfig(), status.Snapshot{}, proxmox.Stats{}, weather.Now{}, rates.Table{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(body)
+	services := strings.Index(html, `style="order:0"`)
+	work := strings.Index(html, `style="order:1"`)
+	if services < 0 || work < 0 {
+		t.Fatalf("sections are missing their config order:\n%s", html)
+	}
+	if !strings.Contains(html, ".filtering main") {
+		t.Error("the stylesheet no longer collapses the columns while filtering")
+	}
+}
