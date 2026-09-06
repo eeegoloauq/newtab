@@ -36,7 +36,7 @@
 <main>
 {{range .Columns}}<div class="col">
 {{range $sec := .Sections}}
-  <section class="sec{{if $sec.Live}} live{{end}}" data-sec>
+  <section class="sec{{if $sec.Live}} live{{end}}" data-sec style="order:{{$sec.Order}}">
     <h2>{{$sec.Name}}</h2>
     <ul>
     {{range $sec.Links}}

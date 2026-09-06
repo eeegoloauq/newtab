@@ -32,6 +32,17 @@ content changed — so hiding a row while filtering threw whole sections into th
 next column, and the page jumped sideways on every keystroke. The sections are
 dealt into columns on the server now; a column can only get shorter.
 
+## One list while filtering
+
+Keeping the matches where they sat looked like the honest thing to do: the
+page never moves, and a link stays where the eye learned it. It is honest and
+it does not work. Spatial memory is worth something while the whole list is
+on screen; with three matches left it means scanning the full width of the
+page for the one Enter opens, past columns that are now empty. So a query
+collapses the columns into a single list under the field, in config order,
+with the first match one line below the cursor. Nothing moves while the field
+is empty, which is the state the page is in every time it opens.
+
 ## A caption, a placeholder and a line of prose
 
 The field had a label above it, a placeholder inside it, and a sentence below

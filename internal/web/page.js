@@ -8,6 +8,18 @@
   var q = document.getElementById('q');
   var links = Array.prototype.slice.call(document.querySelectorAll('a[data-key]'));
   var sections = Array.prototype.slice.call(document.querySelectorAll('[data-sec]'));
+  // Columns are packed by height, so document order runs down one column
+  // and then down the next. While filtering the page shows one list in
+  // config order, and the match Enter opens has to be the one at the top
+  // of what the eye sees, not the one the packer happened to put first.
+  links.sort(function (a, b) {
+    return secOrder(a) - secOrder(b);
+  });
+
+  function secOrder(a) {
+    var sec = a.parentNode.parentNode.parentNode;
+    return parseInt(sec.style.order, 10) || 0;
+  }
   var hit = null;
 
   // What gets hidden is the row, not the link inside it: hiding only the
@@ -30,6 +42,8 @@
     for (var j = 0; j < sections.length; j++) {
       sections[j].classList.toggle('out', !sections[j].querySelector('li:not(.out)'));
     }
+
+    document.body.classList.toggle('filtering', t !== '');
 
     // The match Enter would open underlines itself. The same fact goes
     // to a screen reader, which cannot see an underline — out loud it is
