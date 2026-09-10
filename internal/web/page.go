@@ -34,8 +34,17 @@ var pageHTML string
 //go:embed page.css
 var pageCSS string
 
+//go:embed rank.js
+var rankJS string
+
 //go:embed page.js
-var pageJS string
+var clientJS string
+
+// The page ships one script, and it is these two files in this order:
+// rank.js answers "how well does this row match", page.js does everything
+// that needs the document. Two files because only the first one can be
+// tested without a browser.
+var pageJS = rankJS + clientJS
 
 var pageTmpl = template.Must(template.New("page").Parse(pageHTML))
 
@@ -86,8 +95,8 @@ type pageView struct {
 }
 
 // columnView is one column of the page. Dealing the sections into
-// columns here, rather than letting CSS do it, is what keeps a section
-// from jumping to another column when the filter hides a row.
+// columns here, rather than letting CSS rebalance them, is what keeps a
+// section from jumping to another column while the page is being read.
 // weatherView is what the page draws for the weather: a number and the
 // name of a glyph. No word, so no language.
 type weatherView struct {
@@ -143,10 +152,15 @@ type linkView struct {
 	Tail string
 	// Pin lifts this row to the top of its section.
 	Pin bool
-	// Key is what the filter matches against: the name, the host and any
-	// aliases, lowercased and joined. Matching happens in the browser
-	// against this one string so the filter never touches the network.
-	Key string
+	// Key and Alias are what the filter matches against, lowercased: the
+	// name, and the aliases joined by a pipe. They reach the page as
+	// separate values, and separate from Host, because the filter scores
+	// a hit on a name differently from a hit on an alias or a host —
+	// joined into one string, as they used to be, it could not tell them
+	// apart. Matching happens in the browser against these, so the filter
+	// never touches the network.
+	Key   string
+	Alias string
 }
 
 // render builds the whole document. Every section is a list and they all
@@ -218,11 +232,12 @@ func buildWith(c *config.Config, inline bool, snap status.Snapshot, pve proxmox.
 		sv := sectionView{Name: s.Name, Order: len(flat)}
 		for _, l := range s.Links {
 			lv := linkView{
-				Pin:  l.Pin,
-				Name: l.Name,
-				URL:  l.URL,
-				Host: hostOf(l.URL),
-				Key:  searchKey(l),
+				Pin:   l.Pin,
+				Name:  l.Name,
+				URL:   l.URL,
+				Host:  hostOf(l.URL),
+				Key:   searchKey(l.Name),
+				Alias: aliasKey(l.Alias),
 			}
 			if s.Style == config.StyleLive {
 				lv.Tail, lv.Down = state(snap, l, c.Text, c.Status.Tail)
@@ -539,15 +554,20 @@ func deal(sections []sectionView, n int) []columnView {
 	return cols
 }
 
+// hostOf is lowercased because the filter compares it against a query
+// that already is: a URL keeps whatever case it was typed in.
 func hostOf(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return ""
 	}
-	return strings.TrimPrefix(u.Hostname(), "www.")
+	return strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.")
 }
 
-func searchKey(l config.Link) string {
-	parts := append([]string{l.Name, hostOf(l.URL)}, l.Alias...)
-	return strings.ToLower(strings.Join(parts, " "))
+func searchKey(name string) string { return strings.ToLower(name) }
+
+// aliasKey joins the aliases with a pipe rather than a space: an alias is
+// matched from its own start, so the filter has to know where one ends.
+func aliasKey(alias []string) string {
+	return strings.ToLower(strings.Join(alias, "|"))
 }

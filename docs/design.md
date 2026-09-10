@@ -39,9 +39,36 @@ page never moves, and a link stays where the eye learned it. It is honest and
 it does not work. Spatial memory is worth something while the whole list is
 on screen; with three matches left it means scanning the full width of the
 page for the one Enter opens, past columns that are now empty. So a query
-collapses the columns into a single list under the field, in config order,
-with the first match one line below the cursor. Nothing moves while the field
-is empty, which is the state the page is in every time it opens.
+collapses the columns into a single list under the field, best match first,
+with the one Enter opens a line below the cursor. Nothing moves while the
+field is empty, which is the state the page is in every time it opens.
+
+## Ranking, rather than the first row that contains the letters
+
+The filter matched a query as a substring of one string per row — name, host
+and aliases joined — and the first such row in config order won. It is the
+shortest filter that can be written and on this page it is not a search:
+every host ends in the same domain, so "lo" answered with the domain of
+whatever row came first rather than with the row named Lookout, and one
+letter answered with whatever contained that letter. Rows are scored now, in
+tiers: the start of a name, the start of an alias, the start of a word inside
+either, the initials, the first label of the host — the name a box answers to
+on the LAN — and only then a letter found in the middle of a word. A single
+character reaches no further than the start of a name, an alias or a word in
+one, which is as much as a single character can honestly mean. The rest of a
+host is never matched at all: it is shared by forty rows, so matching it is
+matching nothing.
+
+The matches are moved into a list of their own rather than left where they sit
+and painted in a new order. CSS `order` moves what the eye sees and nothing
+else, so tabbing and a screen reader would have gone on reading the page in
+the order the columns happened to be packed in.
+
+Subsequence matching, the fzf kind where "ngpm" finds Nginx Proxy Manager,
+was not taken. It earns its keep against thousands of paths nobody wrote; a
+list of sixty names somebody typed by hand is a list you already know, and
+there predictability beats reach — every extra way to match is another way to
+answer a two-letter query with a surprise.
 
 ## A caption, a placeholder and a line of prose
 

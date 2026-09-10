@@ -45,18 +45,30 @@ func TestRenderSplitsStyles(t *testing.T) {
 	}
 }
 
-func TestHostOfStripsWWW(t *testing.T) {
-	if got := hostOf("https://www.example.org/x?a=1"); got != "example.org" {
-		t.Fatalf("hostOf = %q, want example.org", got)
+func TestHostOfStripsWWWAndLowercases(t *testing.T) {
+	// The filter compares a host against a query that is already
+	// lowercase, and a URL keeps whatever case it was typed in — so the
+	// case has to go before the www., not after it.
+	for _, raw := range []string{"https://www.example.org/x?a=1", "https://WWW.Example.ORG/"} {
+		if got := hostOf(raw); got != "example.org" {
+			t.Fatalf("hostOf(%q) = %q, want example.org", raw, got)
+		}
 	}
 }
 
-func TestSearchKeyIsLowercaseAndCoversAliasAndHost(t *testing.T) {
-	key := searchKey(config.Link{Name: "Music", URL: "https://music.example.com/", Alias: []string{"Музыка"}})
-	for _, want := range []string{"music", "music.example.com", "музыка"} {
-		if !strings.Contains(key, want) {
-			t.Fatalf("key %q lacks %q", key, want)
-		}
+// The filter scores a hit on a name, on an alias and on a host
+// differently, so the three reach it as three values. Joined into one
+// string they were indistinguishable, which is how every row on a
+// one-domain page came to answer to that domain.
+func TestSearchKeysAreLowercaseAndSeparate(t *testing.T) {
+	if got := searchKey("Music"); got != "music" {
+		t.Fatalf("searchKey = %q, want music", got)
+	}
+	if got := aliasKey([]string{"Музыка", "Sound"}); got != "музыка|sound" {
+		t.Fatalf("aliasKey = %q, want музыка|sound", got)
+	}
+	if got := aliasKey(nil); got != "" {
+		t.Fatalf("aliasKey(nil) = %q, want empty", got)
 	}
 }
 
@@ -168,9 +180,9 @@ func TestRenderEscapes(t *testing.T) {
 }
 
 // Columns are packed by height, so a section's place in the document is not
-// its place in the config. While filtering, the page shows one list instead
-// of columns, and this attribute is what puts that list back in the order
-// the sections were written in.
+// its place in the config. This attribute carries the config order the
+// filter needs: between two rows that match a query equally well, the one
+// the operator wrote first wins.
 func TestSectionsCarryTheirConfigOrder(t *testing.T) {
 	body, err := render(testConfig(), status.Snapshot{}, proxmox.Stats{}, weather.Now{}, rates.Table{})
 	if err != nil {
@@ -182,7 +194,13 @@ func TestSectionsCarryTheirConfigOrder(t *testing.T) {
 	if services < 0 || work < 0 {
 		t.Fatalf("sections are missing their config order:\n%s", html)
 	}
-	if !strings.Contains(html, ".filtering main") {
-		t.Error("the stylesheet no longer collapses the columns while filtering")
+	// The results list has to exist in the markup for the script to move
+	// rows into, and the stylesheet has to put the columns away while it
+	// is showing.
+	if !strings.Contains(html, `<ul class="hits" id="hits" role="list">`) {
+		t.Error("the page has no results list for the filter to fill")
+	}
+	if !strings.Contains(html, ".filtering .col") {
+		t.Error("the stylesheet no longer puts the columns away while filtering")
 	}
 }

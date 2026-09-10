@@ -72,6 +72,12 @@ sections:
   - name: A
     links: []
 `, "no links"},
+		"alias with a pipe": {`
+sections:
+  - name: A
+    links:
+      - {name: X, url: https://example.com/, alias: ["a|b"]}
+`, "separates aliases"},
 		"engine without query": {"search:\n  engine: https://example.com/\n" + minimal, "%s"},
 		"prefix without query": {"search:\n  prefixes:\n    w: https://example.com/\n" + minimal, "%s"},
 		"prefix with a space":  {"search:\n  prefixes:\n    \"w x\": https://example.com/?q=%s\n" + minimal, "before a space"},
