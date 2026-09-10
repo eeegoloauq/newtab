@@ -541,6 +541,15 @@ func (c *Config) validate() error {
 			if u.Scheme != "http" && u.Scheme != "https" {
 				return fmt.Errorf("link %q: scheme %q is not http(s)", l.Name, u.Scheme)
 			}
+			// The page carries the aliases of a row in one attribute,
+			// separated by pipes, because the filter matches each of them
+			// from its own start. An alias with a pipe in it would arrive
+			// as two, and silently answer to half of itself.
+			for _, a := range l.Alias {
+				if strings.Contains(a, "|") {
+					return fmt.Errorf("link %q: alias %q contains %q, which separates aliases on the page", l.Name, a, "|")
+				}
+			}
 		}
 	}
 	return nil

@@ -34,13 +34,18 @@
 </form>
 
 <main>
+<!-- Where the matching rows go while a query runs. It is in the markup,
+     empty, because the script moves rows and never builds any. The role
+     is not redundant: a list styled without markers stops being a list to
+     VoiceOver, and while a query runs this is the only structure left. -->
+<ul class="hits" id="hits" role="list"></ul>
 {{range .Columns}}<div class="col">
 {{range $sec := .Sections}}
   <section class="sec{{if $sec.Live}} live{{end}}" data-sec style="order:{{$sec.Order}}">
     <h2>{{$sec.Name}}</h2>
     <ul>
     {{range $sec.Links}}
-      <li{{if .Down}} class="down"{{end}}><a href="{{.URL}}" data-key="{{.Key}}" data-name="{{.Name}}"{{if .TailHint}} title="{{.TailHint}}"{{end}}
+      <li{{if .Down}} class="down"{{end}}><a href="{{.URL}}" data-key="{{.Key}}" data-host="{{.Host}}"{{if .Alias}} data-alias="{{.Alias}}"{{end}} data-name="{{.Name}}"{{if .TailHint}} title="{{.TailHint}}"{{end}}
         >{{if .Icon}}<img class="ico" src="{{.Icon}}" alt="" width="20" height="20"
         >{{else}}<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#globe"/></svg>{{end
         }}<span class="name">{{.Name}}</span
