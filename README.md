@@ -36,13 +36,9 @@ sections:
 ```yaml
 search:
   engine: https://duckduckgo.com/?q=%s
-  prefixes:                                  # "w cheese" goes to Wikipedia
-    w: https://en.wikipedia.org/w/index.php?search=%s
-    gh: https://github.com/search?q=%s
 ```
 
-Anything that looks like an address — `example.com`, `198.51.100.20:5001` — opens
-instead of being searched for.
+Enter opens the highlighted link; if none matches, it searches with the configured engine.
 
 `style: list` is bookmarks; `style: live` is things that can be down, and those
 rows can show state. Full example: [config.example.yaml](config.example.yaml).
@@ -120,7 +116,9 @@ links change. Every
 [release](https://github.com/eeegoloauq/newtab/releases) carries one built from
 the example config.
 
-Running the server instead keeps the page live.
+For a live new tab backed by your running server, use `./newtab extension -url
+https://newtab.example.com config.yaml ./ext` or the live extension archive in a
+release. The live extension redirects each new tab to the server page.
 
 ## State from a monitor
 
@@ -162,7 +160,7 @@ Nothing is written back, and the poll runs on its own clock.
 
 ```yaml
 proxmox:
-  url: https://198.51.100.10:8006
+  url: https://hypervisor.example.com:8006
   token_env: NEWTAB_PROXMOX_TOKEN   # user@realm!id=secret, from the environment
   attach: Hypervisor                # the link whose row shows them
   insecure: true                    # it answers with its own certificate

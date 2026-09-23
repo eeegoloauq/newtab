@@ -1,98 +1,32 @@
 # newtab
 
-Start page. Renders one HTML page from a YAML file, fetches the icon of every
-site it links to, and reads a monitor and a hypervisor to put their numbers on
-the matching rows.
+A configurable browser start page for people who keep their links in YAML. A Go server renders the page and optional status, weather, rate, and hypervisor data; it can also generate a standalone page or browser extension.
 
-## Layout
-
-```
-cmd/newtab      CLI: run, validate, render, icons, version
-internal/config YAML -> sections, and every validation error the operator gets
-internal/icons  fetching a site's own favicon, and the store it lands in
-internal/status  read-only client for a lookout monitor, polled on its own clock
-internal/weather read-only client for Open-Meteo, polled on its own clock
-internal/rates   read-only client for currency and crypto prices, same shape
-internal/proxmox read-only client for a hypervisor's three numbers
-internal/web    the page: template, CSS, JS, and the HTTP handlers
-```
-
-## Rules
-
-The page is rendered on the server from the config. JavaScript filters what is
-already there and decides what Enter opens — it never builds markup and never
-fetches. With JS off the page is still every link, which is the point.
-
-Nothing on the page may move, fade or reflow after the first paint. This page
-opens dozens of times a day; animation is a tax paid every time.
-
-Typing does not open an overlay and does not dim the page. The list below the
-field is the result set, so it stays readable while you type.
-
-Links open in the same tab. This is the tab you opened in order to go
-somewhere.
-
-No icon is fetched from a third party. Favicons through a search engine leak
-the whole link list to it; icons are served from here or not at all.
-
-Icons are fetched ahead of time, never while a page is being served. A server
-that renders by proxying an icon on demand would make the first paint wait on
-forty other people's websites, and would hand every one of them the moment you
-open your browser. `newtab icons` walks to every URL in the config, with a browser's user agent
-and with TLS verification off. Both are deliberate: sites behind a bot filter
-answer 403 to anything less, and half the boxes on a home LAN serve a
-self-signed certificate. It follows that stored icons are untrusted bytes, so
-`/icon/` serves them under `nosniff` and a sandbox CSP. Do not "fix" any of
-those three by removing them.
-
-Secrets are read from the environment, never from the config: the config is in
-version control and the secret is not. `newtab validate` fails when the named
-variable is empty, because a page that silently drops an integration is worse
-than one that will not start.
-
-A request never waits on the monitor. The poller keeps the last answer in
-memory and a failed poll keeps it: a monitor restart is not an outage of
-everything. Nothing is ever written back to the monitor — it owns what is up,
-this is a reader.
-
-The columns are dealt on the server. CSS multicol was tried and it rebalanced
-on every keystroke, throwing sections sideways while the filter ran.
-
-Anything the page reads from elsewhere is polled on its own clock by a package
-of its own, and handed to the renderer as a value. There is no fetching inside
-a render and no shared mutable state between them.
-
-The theme is four colours and two numbers, and every one of them is validated
-before it reaches the stylesheet. Do not widen it into a styling language: the
-page is an index and it has to stay readable.
-
-The page ships no natural language. Strings that are not a link name live in
-`text:` in the config, with English defaults in `applyDefaults` — add the
-default in the same change as the field.
-
-Comments say why, not what.
-
-An update must never leave a page that will not start: `contrib/newtab-update`
-validates the running config with the new binary before it replaces anything,
-and rolls back when `/healthz` goes quiet. Keep that order if you touch it.
-
-## Working on it
+## Working commands
 
 ```sh
-go vet ./... && go test ./...
+go build ./cmd/newtab
+go test ./...
+go test -race ./...
+go vet ./...
+go run ./cmd/newtab demo
 go run ./cmd/newtab validate config.example.yaml
 go run ./cmd/newtab render config.example.yaml /tmp/page.html
 go run ./cmd/newtab run config.example.yaml
 ```
 
-Tests must not name a real host or address — this repo is public. Use
-`example.com`, `.example`, `.invalid`, `198.51.100.0/24`. Non-ASCII names in
-tests are data, not prose: they cover the slug path and should stay.
+The CLI also provides `icons`, `extension`, and `version`; see `go run ./cmd/newtab` for usage. The ranking test skips if Node is unavailable.
 
-What has been tried and thrown away is in [docs/design.md](docs/design.md).
-Read it before reintroducing tiles, monograms or a database.
+## Decisions and gotchas
 
-Commit messages are one line: what changed and why, English, present tense, no
-prefix tags. No body — the reason belongs in a comment next to the code, where
-the next reader will actually be. A body is for the rare decision that has no
-such place: a revert and what caused it.
+- Keep the page usable with JavaScript disabled. Filtering acts on server-rendered links; it does not fetch data while the page is open. Keep links in the same tab and avoid animation or layout shifts. [Previous design decisions](docs/design.md) explain why tiles, CSS columns, on-demand icon proxying, and editing links in the page were rejected.
+- Missing icons are fetched in the background when the server starts, or explicitly with `newtab icons`; page requests do not wait for them. The fetcher uses a browser user agent and disables TLS verification for sites with self-signed certificates. Stored icons are untrusted: retain `nosniff` and the sandbox CSP when serving them.
+- Integration secrets come from environment variables. Validation fails if a configured variable is empty. Pollers retain their last good response; rendering never waits on a monitor.
+- Keep configuration as the source of truth. Site copy belongs in the config's `text:` values, with defaults supplied when fields are added. Do not add a database or an in-page config editor.
+- Use example domains and reserved documentation addresses in tests and docs. This repository may be public.
+
+## Release and recovery
+
+A `v*` tag or manual GitHub release workflow builds Linux amd64/arm64 binaries, extension archives, checksums, and container images. Deploy the image with `contrib/compose.yaml` or the binary with `contrib/systemd/newtab.service`. The optional `contrib/newtab-update` verifies the checksum and running config before replacement, then checks `/healthz` and restores the previous binary if the restart fails. Keep that validation and rollback order.
+
+Planned larger work: `ROADMAP.md`.
