@@ -1,9 +1,16 @@
+<div align="center">
+
 # newtab
 
-The page your browser opens instead of its own new tab: your links on one
-screen, filtered as you type.
+**The page your browser opens instead of its own new tab.**
 
-![The demo page](docs/screenshot.png)
+[![Release](https://img.shields.io/github/v/release/eeegoloauq/newtab?label=release)](https://github.com/eeegoloauq/newtab/releases/latest)
+
+Your links on one screen, filtered as you type.
+
+<img src="docs/screenshot.png" alt="The demo page" width="85%">
+
+</div>
 
 ## Run it
 
