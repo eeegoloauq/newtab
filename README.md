@@ -1,31 +1,28 @@
-<div align="center">
-
 # newtab
 
-**The page your browser opens instead of its own new tab.**
+A start page for your browser: your links on one screen, filtered as you type, with optional
+status from an uptime monitor, weather, exchange rates and Proxmox load.
 
 [![Release](https://img.shields.io/github/v/release/eeegoloauq/newtab?label=release)](https://github.com/eeegoloauq/newtab/releases/latest)
+[![CI](https://github.com/eeegoloauq/newtab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/eeegoloauq/newtab/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Your links on one screen, filtered as you type.
-
-<img src="docs/screenshot.png" alt="The demo page" width="85%">
-
-</div>
+![The demo page](docs/screenshot.png)
 
 ## Run it
 
 ```sh
 go build ./cmd/newtab
-./newtab demo                        # the page above, on made-up state
+./newtab demo                        # the page above, with made-up data
 
 cp config.example.yaml config.yaml   # your links go here
 ./newtab validate config.yaml
 ./newtab run config.yaml
 ```
 
-Icons are fetched from the sites themselves on the first run and read from disk
-after that. A site that serves none gets the globe a browser would draw; a file
-you put in `icon_dir` yourself wins over the fetcher.
+`run` downloads each site's icon into `icon_dir` in the background and serves it from disk after
+that. Sites without an icon get a globe. A file you put in `icon_dir` yourself is used instead of
+the downloaded one.
 
 ## Config
 
@@ -47,8 +44,8 @@ search:
 
 Enter opens the highlighted link; if none matches, it searches with the configured engine.
 
-`style: list` is bookmarks; `style: live` is things that can be down, and those
-rows can show state. Full example: [config.example.yaml](config.example.yaml).
+`style: list` is for bookmarks. `style: live` is for services, and their rows can show status
+from a monitor. Full example: [config.example.yaml](config.example.yaml).
 
 ## Looks
 
@@ -67,8 +64,8 @@ theme:
 
 ![The same page with a background](docs/looks/background.png)
 
-`newtab demo -config yours.yaml` renders your config against invented state:
-what a background does to it, and what a row looks like when something is down.
+`newtab demo -config yours.yaml` renders your config with made-up status, so you can see the
+background and a row that is down.
 
 ## Rates
 
@@ -80,9 +77,9 @@ rates:
   every: 30m
 ```
 
-`EUR 0.86 · BTC 78k` beside the field. Currencies from
-[open.er-api.com](https://open.er-api.com/), crypto from Coinbase's public spot
-price. Neither needs an account.
+Shown next to the search field as `EUR 0.86 · BTC 78k`. Currencies come from
+[open.er-api.com](https://open.er-api.com/), crypto from Coinbase's public spot price. No
+accounts needed.
 
 ## Weather
 
@@ -93,19 +90,17 @@ weather:
   every: 15m
 ```
 
-Temperature and a glyph beside the field, from
-[Open-Meteo](https://open-meteo.com/). No account, no key.
+Temperature and an icon next to the search field, from [Open-Meteo](https://open-meteo.com/). No
+account or key needed.
 
 ## Making it your start page
 
-**Chrome, Edge, desktop.** Settings → On startup, and Appearance → Show home
-button. **Firefox, desktop.** Settings → Home → Homepage and new windows →
-Custom URLs. Neither can point the new tab page itself at a URL — that needs an
-extension, below.
+- Chrome and Edge: Settings → On startup, and Appearance → Show home button.
+- Firefox: Settings → Home → Homepage and new windows → Custom URLs.
+- Android and iPhone: Add to Home screen from the browser menu. Chrome on Android also accepts the
+  address under Settings → Homepage.
 
-**Android, iPhone.** Add to Home screen from the browser menu: it opens full
-screen with its own icon. Chrome on Android also takes the address under
-Settings → Homepage.
+Desktop browsers cannot point the new tab page at a URL. For that, use the extension below.
 
 ## As a new tab
 
@@ -116,12 +111,10 @@ writes one:
 ./newtab extension config.yaml ./ext
 ```
 
-A folder with the page, its icons and a manifest: load it unpacked
-(`chrome://extensions` → Developer mode → Load unpacked, or `about:debugging`
-in Firefox). It is a snapshot with nothing behind it, so rebuild it when your
-links change. Every
-[release](https://github.com/eeegoloauq/newtab/releases) carries one built from
-the example config.
+This writes a folder with the page, its icons and a manifest. Load it unpacked
+(`chrome://extensions` → Developer mode → Load unpacked, or `about:debugging` in Firefox). It is a
+static copy, so rebuild it when your links change. Every
+[release](https://github.com/eeegoloauq/newtab/releases) includes one built from the example config.
 
 For a live new tab backed by your running server, use `./newtab extension -url
 https://newtab.example.com config.yaml ./ext` or the live extension archive in a
@@ -129,10 +122,9 @@ release. The live extension redirects each new tab to the server page.
 
 ## State from a monitor
 
-This reads [lookout](https://github.com/eeegoloauq/lookout) — a small uptime
-monitor of mine — and nothing else out of the box. Any other monitor works if
-something serves lookout's document, which is the short JSON below; a script in
-front of Uptime Kuma or Gatus is enough.
+Rows can show status from [lookout](https://github.com/eeegoloauq/lookout), an uptime monitor.
+Other monitors work through a small script that serves the same JSON (below), for example in front
+of Uptime Kuma or Gatus.
 
 ```yaml
 status:
@@ -141,8 +133,8 @@ status:
   tail: problems
 ```
 
-Rows match checks by the host they point at, or by `check:` on the link. A row
-that is down says so and for how long. A healthy row shows whatever `tail` says:
+A row is matched to a check by host, or by `check:` on the link. A down row shows how long it has
+been down. A healthy row shows what `tail` selects:
 
 | `tail` | a healthy row shows |
 |---|---|
@@ -151,7 +143,7 @@ that is down says so and for how long. A healthy row shows whatever `tail` says:
 | `uptime24h`, `uptime7d` | that figure, always |
 | `never` | nothing, ever |
 
-The whole of what it reads:
+The fields newtab reads:
 
 ```json
 {"version": 1, "checks": [
@@ -161,7 +153,7 @@ The whole of what it reads:
 ]}
 ```
 
-Nothing is written back, and the poll runs on its own clock.
+newtab only reads this endpoint and polls it on its own schedule.
 
 ## Numbers from Proxmox
 
@@ -173,44 +165,46 @@ proxmox:
   insecure: true                    # it answers with its own certificate
 ```
 
-That row reads `16 · 29% · 51%` — guests running, cpu, memory — and hovering it
-spells that out. `PVEAuditor` is enough. The secret is not in the config file.
+The row shows `16 · 29% · 51%`: running guests, CPU and memory, with labels on hover. The token
+needs the `PVEAuditor` role and is read from the environment, not from the config.
 
 ## On a server
 
-Setup is your `config.yaml` plus either a compose file or a systemd unit.
-Nothing is built here: every
-[release](https://github.com/eeegoloauq/newtab/releases) carries binaries for
-linux/amd64 and arm64, the browser extension, and `SHA256SUMS`.
+Every [release](https://github.com/eeegoloauq/newtab/releases) has binaries for linux/amd64 and
+arm64, the browser extension and `SHA256SUMS`. Go is only needed to build from source.
 
-**Docker.** The image is 23 MB, has no shell in it and runs as `nobody`. Put
-[`contrib/compose.yaml`](contrib/compose.yaml) next to your config:
+In `config.yaml`, set `icon_dir: /var/lib/newtab`. That directory is the Docker volume and the
+systemd state directory.
+
+**Docker.** The image is 23 MB, has no shell and runs as `nobody`. Also set
+`listen: 0.0.0.0:5669` in the config, put [`contrib/compose.yaml`](contrib/compose.yaml) next to it
+and run:
 
 ```sh
 docker compose up -d
 ```
 
-**Or the binary.**
+**systemd.**
 
 ```sh
 install -m 0755 newtab-linux-amd64 /usr/bin/newtab
+useradd --system --home /var/lib/newtab --shell /usr/sbin/nologin newtab
 install -m 0644 contrib/systemd/newtab.service /etc/systemd/system/
-mkdir -p /etc/newtab && cp config.yaml /etc/newtab/
-newtab icons /etc/newtab/config.yaml     # fetch the site icons once
+install -d /etc/newtab && cp config.yaml /etc/newtab/
 systemctl enable --now newtab
 ```
 
-Then put a reverse proxy in front of it, or open the port to your LAN. Go is
-only needed if you build it yourself.
+Put a reverse proxy in front of it, or open the port to your LAN.
 
-To keep it current, [`contrib/newtab-update`](contrib/newtab-update) fetches the
-latest release, checks it against `SHA256SUMS`, makes the new binary load your
-config before replacing anything, and puts the old one back if the service does
-not answer afterwards. Its timer is in `contrib/systemd/`.
+[`contrib/newtab-update`](contrib/newtab-update) updates to the latest release: it checks
+`SHA256SUMS`, makes sure the new binary loads your config, and restores the old one if the service
+does not respond after the restart. Its timer is in `contrib/systemd/`.
 
 ## Notes
 
-The page sends no referrer and loads nothing from anywhere but your own server.
-There is no state to keep beyond the config and the icon directory.
+The page sends no referrer and loads nothing from other servers. The only state is the config and
+the icon directory.
 
-MIT.
+## License
+
+MIT

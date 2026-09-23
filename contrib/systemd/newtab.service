@@ -8,8 +8,8 @@ Wants=network-online.target
 Type=simple
 User=newtab
 Group=newtab
-# The config and the icons are the only files it touches, and it writes
-# to neither while running: `newtab icons` fills the icon directory.
+# It reads the config and writes site icons to the state directory:
+# set icon_dir: /var/lib/newtab.
 ConfigurationDirectory=newtab
 StateDirectory=newtab
 WorkingDirectory=/var/lib/newtab
