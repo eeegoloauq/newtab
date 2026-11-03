@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // The codes are the part of this that will look wrong to the next
@@ -102,4 +103,56 @@ func contains(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// An outage must not leave yesterday's successful reading on the page forever.
+func TestFailedRefreshRetainsRecentReadingButNotStaleWeather(t *testing.T) {
+	fail := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if fail {
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		w.Write([]byte(`{"current":{"temperature_2m":8.2,"weather_code":3,"is_day":1}}`))
+	}))
+	defer srv.Close()
+	p := &Poller{Every: 15 * time.Minute}
+	client := &http.Client{Transport: rewrite{srv.URL}}
+	if err := p.poll(context.Background(), client); err != nil {
+		t.Fatal(err)
+	}
+	first := p.Now()
+	if !first.OK || first.Temperature != 8 {
+		t.Fatalf("initial reading = %+v", first)
+	}
+	updated := p.updatedAt
+	fail = true
+	if err := p.poll(context.Background(), client); err == nil {
+		t.Fatal("failed upstream request was accepted")
+	}
+	if p.Now() != first || !p.updatedAt.Equal(updated) {
+		t.Fatal("failed refresh changed the reading or its age")
+	}
+	p.updatedAt = time.Now().Add(-time.Hour - time.Minute)
+	if p.Now().OK {
+		t.Fatal("weather stayed visible beyond its freshness limit")
+	}
+	fail = false
+	if err := p.poll(context.Background(), client); err != nil {
+		t.Fatal(err)
+	}
+	if !p.Now().OK {
+		t.Fatal("successful refresh did not restore weather")
+	}
+}
+
+func TestFreshnessRespectsLongerPollingInterval(t *testing.T) {
+	p := &Poller{Every: 2 * time.Hour, last: Now{Temperature: 8, OK: true}, updatedAt: time.Now().Add(-3 * time.Hour)}
+	if !p.Now().OK {
+		t.Fatal("reading expired before two configured polling intervals")
+	}
+	p.updatedAt = time.Now().Add(-5 * time.Hour)
+	if p.Now().OK {
+		t.Fatal("reading did not expire after two polling intervals")
+	}
 }

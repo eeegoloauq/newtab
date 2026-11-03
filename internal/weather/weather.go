@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -44,18 +45,26 @@ type Poller struct {
 	Fahrenheit bool
 	Every      time.Duration
 
-	mu   sync.RWMutex
-	last Now
+	mu        sync.RWMutex
+	last      Now
+	updatedAt time.Time
 }
 
 func (p *Poller) Now() Now {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
+	maxAge := time.Hour
+	if p.Every*2 > maxAge {
+		maxAge = p.Every * 2
+	}
+	if p.last.OK && time.Since(p.updatedAt) > maxAge {
+		return Now{}
+	}
 	return p.last
 }
 
-// Run polls until the context is cancelled. Weather that is an hour old
-// is still weather, so a failure keeps the previous answer.
+// Run polls until cancellation. Brief failures keep recent weather; Now hides
+// readings older than an hour or two configured polling intervals.
 func (p *Poller) Run(ctx context.Context) {
 	every := p.Every
 	if every <= 0 {
@@ -63,10 +72,8 @@ func (p *Poller) Run(ctx context.Context) {
 	}
 	client := &http.Client{Timeout: 10 * time.Second}
 	for {
-		if n, err := p.fetch(ctx, client); err == nil {
-			p.mu.Lock()
-			p.last = n
-			p.mu.Unlock()
+		if err := p.poll(ctx, client); err != nil && ctx.Err() == nil {
+			log.Printf("weather: refresh failed: %v", err)
 		}
 		select {
 		case <-ctx.Done():
@@ -74,6 +81,18 @@ func (p *Poller) Run(ctx context.Context) {
 		case <-time.After(every):
 		}
 	}
+}
+
+func (p *Poller) poll(ctx context.Context, client *http.Client) error {
+	n, err := p.fetch(ctx, client)
+	if err != nil {
+		return err
+	}
+	p.mu.Lock()
+	p.last = n
+	p.updatedAt = time.Now()
+	p.mu.Unlock()
+	return nil
 }
 
 const endpoint = "https://api.open-meteo.com/v1/forecast"
