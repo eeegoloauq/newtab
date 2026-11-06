@@ -48,8 +48,8 @@ jobs:
           cd dist && zip -qr newtab-extension-live.zip newtab-live && rm -rf newtab-live
           sha256sum newtab-extension-offline.zip newtab-extension-live.zip >> SHA256SUMS
 
-      # The release notes are the message of the annotated tag; the generated
-      # commit list is appended after them.
+      # The release notes are the message of the annotated tag, then which file
+      # to download; the generated commit list is appended after them.
       - name: Release notes from the tag message
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
@@ -58,6 +58,7 @@ jobs:
           : > "$RUNNER_TEMP/notes.md"
           git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG" 2>/dev/null || true
           git tag -l --format='%(contents)' "$TAG" > "$RUNNER_TEMP/notes.md"
+          cat contrib/release-install.md >> "$RUNNER_TEMP/notes.md"
 
       - uses: softprops/action-gh-release@v3
         with:
